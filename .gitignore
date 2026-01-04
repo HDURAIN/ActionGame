@@ -1,0 +1,19 @@
+# ===== Unreal Engine =====
+Binaries/
+DerivedDataCache/
+Intermediate/
+Saved/
+.vs/
+
+# ===== Visual Studio =====
+*.sln
+*.VC.db
+*.VC.opendb
+.vsconfig
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+
+# ===== Crash =====
+*.dmp
