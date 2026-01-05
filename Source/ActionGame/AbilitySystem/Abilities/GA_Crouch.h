@@ -40,4 +40,6 @@ public:
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Crouch")
 	TSubclassOf<UGameplayEffect> CrouchStateEffect;
+
+	FActiveGameplayEffectHandle CrouchEffectHandle;
 };

@@ -62,7 +62,7 @@ void UGA_Crouch::ActivateAbility(
 
 		if (Spec.IsValid())
 		{
-			ActorInfo->AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+			CrouchEffectHandle = ActorInfo->AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
 		}
 	}
 
@@ -78,8 +78,6 @@ void UGA_Crouch::EndAbility(
 	bool bWasCancelled
 )
 {
-	UAbilitySystemComponent* ASC = (ActorInfo && ActorInfo->AbilitySystemComponent.IsValid()) ? ActorInfo->AbilitySystemComponent.Get() : nullptr;
-
 	if (ActorInfo && ActorInfo->AvatarActor.IsValid())
 	{
 		if (ACharacter* Character = Cast<ACharacter>(ActorInfo->AvatarActor.Get()))
@@ -91,10 +89,12 @@ void UGA_Crouch::EndAbility(
 		}
 	}
 
-	if (ASC && CrouchStateEffect)
+	if (CrouchEffectHandle.IsValid() && ActorInfo && ActorInfo->AbilitySystemComponent.IsValid())
 	{
-		ASC->RemoveActiveGameplayEffectBySourceEffect(CrouchStateEffect, ASC, -1);
+		ActorInfo->AbilitySystemComponent->RemoveActiveGameplayEffect(CrouchEffectHandle);
 	}
+
+	CrouchEffectHandle.Invalidate();
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }

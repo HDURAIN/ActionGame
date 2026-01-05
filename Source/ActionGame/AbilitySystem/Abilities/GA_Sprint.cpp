@@ -21,23 +21,17 @@ void UGA_Sprint::ActivateAbility(
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
-	UE_LOG(LogTemp, Warning, TEXT("1"));
-
 	if (!ActorInfo || !ActorInfo->AvatarActor.IsValid())
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("2"));
-
 	if (!HasAuthorityOrPredictionKey(ActorInfo, &ActivationInfo))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
-
-	UE_LOG(LogTemp, Warning, TEXT("3"));
 
 	// 物理校验
 	ACharacter* Character = Cast<ACharacter>(ActorInfo->AvatarActor.Get());
@@ -47,15 +41,11 @@ void UGA_Sprint::ActivateAbility(
 		return;
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("4"));
-
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
-
-	UE_LOG(LogTemp, Warning, TEXT("5"));
 
 	if (SprintStateEffect && ActorInfo->AbilitySystemComponent.IsValid())
 	{
@@ -66,9 +56,6 @@ void UGA_Sprint::ActivateAbility(
 			SprintEffectHandle = ActorInfo->AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
 		}
 	}
-
-
-	UE_LOG(LogTemp, Warning, TEXT("6"));
 }
 
 void UGA_Sprint::EndAbility(
