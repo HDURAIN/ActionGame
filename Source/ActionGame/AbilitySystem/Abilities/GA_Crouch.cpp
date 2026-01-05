@@ -4,6 +4,7 @@
 
 #include "GameFramework/Character.h"
 #include "AbilitySystemComponent.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 UGA_Crouch::UGA_Crouch()
 {
@@ -37,9 +38,17 @@ void UGA_Crouch::ActivateAbility(
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
-
 	// 交由CharacterMovement执行Crouch
 	ACharacter* Character = Cast<ACharacter>(ActorInfo->AvatarActor.Get());
+
+	UCharacterMovementComponent* MovementComponent = Character->GetCharacterMovement();
+	if (!MovementComponent || MovementComponent->IsFalling())
+	{
+		// 空中不允许蹲
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+
 	if (Character->CanCrouch())
 	{
 		Character->Crouch();
