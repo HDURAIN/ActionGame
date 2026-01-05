@@ -114,6 +114,10 @@ void AActionGameCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 		// Looking
 		EnhancedInputComponent->BindAction(MouseLookAction, ETriggerEvent::Triggered, this, &AActionGameCharacter::DoLook);
 		EnhancedInputComponent->BindAction(LookAction, ETriggerEvent::Triggered, this, &AActionGameCharacter::DoLook);
+
+		// Crouching
+		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Started, this, &AActionGameCharacter::DoCrouchActivate);
+		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Completed, this, &AActionGameCharacter::DoCrouchCancel);
 	}
 	else
 	{
@@ -193,6 +197,24 @@ void AActionGameCharacter::DoJumpEnd()
 {
 	// signal the character to stop jumping
 	StopJumping();
+}
+
+void AActionGameCharacter::DoCrouchActivate()
+{
+	if (!AbilitySystemComponent) return;
+
+	FGameplayTagContainer TempTags;
+	TempTags.AddTag(CrouchAbilityTag);
+	AbilitySystemComponent->TryActivateAbilitiesByTag(FGameplayTagContainer(TempTags));
+}
+
+void AActionGameCharacter::DoCrouchCancel()
+{
+	if (!AbilitySystemComponent) return;
+
+	FGameplayTagContainer TempTags;
+	TempTags.AddTag(CrouchAbilityTag);
+	AbilitySystemComponent->CancelAbilities(&TempTags);
 }
 
 bool AActionGameCharacter::ApplyGameplayEffectToSelf(TSubclassOf<UGameplayEffect> Effect, FGameplayEffectContextHandle InEffectContext)

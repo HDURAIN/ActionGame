@@ -10,12 +10,12 @@ UGA_Jump::UGA_Jump()
 	// 本地预测执行：
 	// 客户端立即响应输入以保证手感，
 	// 服务器随后校验并同步最终结果
-	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
+	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::ServerOnly;
 
 	// 每个 Avatar 拥有一个独立的 Ability 实例：
 	// - 允许 Ability 内部保存临时状态
 	// - 避免并发预测时状态互相覆盖
-	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
+	InstancingPolicy = EGameplayAbilityInstancingPolicy::NonInstanced;
 }
 
 

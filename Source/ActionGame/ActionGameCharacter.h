@@ -68,6 +68,9 @@ protected: // Input
 	UInputAction* MouseLookAction;
 
 	UPROPERTY(EditAnywhere, Category="Input")
+	UInputAction* CrouchAction;
+
+	UPROPERTY(EditAnywhere, Category="Input")
 	TObjectPtr<UInputMappingContext> DefaultInputMappingContext;
 
 protected: // Input
@@ -92,6 +95,12 @@ public: // Input
 	/** Handles jump pressed inputs from either controls or UI interfaces */
 	UFUNCTION(BlueprintCallable, Category="Input")
 	virtual void DoJumpEnd();
+
+	UFUNCTION(BlueprintCallable, Category="Input")
+	virtual void DoCrouchActivate();
+
+	UFUNCTION(BlueprintCallable, Category = "Input")
+	virtual void DoCrouchCancel();
 
 public: // Camera
 
@@ -130,6 +139,9 @@ protected: // Ability System
 	
 	UPROPERTY(Transient)
 	UAG_AttributeSetBase* AttributeSet;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Abilities|Tags")
+	FGameplayTag CrouchAbilityTag;
 
 public: // Data Assets
 	

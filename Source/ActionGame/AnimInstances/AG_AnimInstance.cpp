@@ -60,3 +60,56 @@ UAnimSequenceBase* UAG_AnimInstance::GetIdleAnimation() const
 		? DefaultCharacterAnimDataAsset->CharacterAnimationData.IdleAnimationAsset
 		: nullptr;
 }
+
+UBlendSpace* UAG_AnimInstance::GetCrouchLocomotionBlendspace() const
+{
+	// 编辑器模式下返回默认的 BlendSpace，避免崩溃和空白预览
+	if (GIsEditor && !GIsPlayInEditorWorld)
+	{
+		return IsValid(DefaultCharacterAnimDataAsset)
+			? DefaultCharacterAnimDataAsset->CharacterAnimationData.CrouchMovementBlendspace
+			: nullptr;
+	}
+
+	// 游戏运行时逻辑
+	if (AActionGameCharacter* ActionGameCharacter = Cast<AActionGameCharacter>(GetOwningActor()))
+	{
+		FCharacterData CharacterData = ActionGameCharacter->GetCharacterData();
+
+		if (IsValid(CharacterData.CharacterAnimDataAsset))
+		{
+			return CharacterData.CharacterAnimDataAsset->CharacterAnimationData.CrouchMovementBlendspace;
+		}
+	}
+
+	// 回退到默认 BlendSpace
+	return IsValid(DefaultCharacterAnimDataAsset)
+		? DefaultCharacterAnimDataAsset->CharacterAnimationData.CrouchMovementBlendspace
+		: nullptr;
+}
+
+UAnimSequenceBase* UAG_AnimInstance::GetCrouchIdleAnimation() const
+{
+	// 编辑器模式下返回默认动画，避免崩溃和空白预览
+	if (GIsEditor && !GIsPlayInEditorWorld)
+	{
+		return IsValid(DefaultCharacterAnimDataAsset)
+			? DefaultCharacterAnimDataAsset->CharacterAnimationData.CrouchIdleAnimationAsset
+			: nullptr;
+	}
+
+	// 游戏运行时逻辑
+	if (AActionGameCharacter* Character = Cast<AActionGameCharacter>(GetOwningActor()))
+	{
+		FCharacterData CharData = Character->GetCharacterData();
+		if (IsValid(CharData.CharacterAnimDataAsset))
+		{
+			return CharData.CharacterAnimDataAsset->CharacterAnimationData.CrouchIdleAnimationAsset;
+		}
+	}
+
+	// 回退到默认动画
+	return IsValid(DefaultCharacterAnimDataAsset)
+		? DefaultCharacterAnimDataAsset->CharacterAnimationData.CrouchIdleAnimationAsset
+		: nullptr;
+}
