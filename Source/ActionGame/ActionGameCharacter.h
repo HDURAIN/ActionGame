@@ -40,6 +40,8 @@ public:
 	/** Constructor */
 	AActionGameCharacter(const FObjectInitializer& ObjectInitializer);
 
+	void BeginPlay() override;
+
 private: // Camera
 	/** Camera boom positioning the camera behind the character */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta = (AllowPrivateAccess = "true"))
@@ -48,7 +50,7 @@ private: // Camera
 	/** Follow camera */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta = (AllowPrivateAccess = "true"))
 	UCameraComponent* FollowCamera;
-	
+
 protected: // Input
 
 	/** Jump Input Action */
@@ -69,6 +71,9 @@ protected: // Input
 
 	UPROPERTY(EditAnywhere, Category="Input")
 	UInputAction* CrouchAction;
+
+	UPROPERTY(EditAnywhere, Category="Input")
+	UInputAction* SprintAction;
 
 	UPROPERTY(EditAnywhere, Category="Input")
 	TObjectPtr<UInputMappingContext> DefaultInputMappingContext;
@@ -101,6 +106,12 @@ public: // Input
 
 	UFUNCTION(BlueprintCallable, Category = "Input")
 	virtual void DoCrouchCancel();
+
+	UFUNCTION(BlueprintCallable, Category = "Input")
+	virtual void DoSprintActivate();
+
+	UFUNCTION(BlueprintCallable, Category = "Input")
+	virtual void DoSprintCancel();
 
 public: // Camera
 
@@ -142,6 +153,9 @@ protected: // Ability System
 
 	UPROPERTY(EditDefaultsOnly, Category = "Abilities|Tags")
 	FGameplayTag CrouchAbilityTag;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Abilities|Tags")
+	FGameplayTag SprintAbilityTag;
 
 public: // Data Assets
 	

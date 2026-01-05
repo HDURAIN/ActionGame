@@ -48,7 +48,7 @@ AActionGameCharacter::AActionGameCharacter(const FObjectInitializer& ObjectIniti
 	// instead of recompiling to adjust them
 	GetCharacterMovement()->JumpZVelocity = 500.f;
 	GetCharacterMovement()->AirControl = 0.35f;
-	GetCharacterMovement()->MaxWalkSpeed = 500.f;
+	/*GetCharacterMovement()->MaxWalkSpeed = 500.f;*/
 	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2000.f;
 	GetCharacterMovement()->BrakingDecelerationFalling = 1500.0f;
@@ -76,6 +76,11 @@ AActionGameCharacter::AActionGameCharacter(const FObjectInitializer& ObjectIniti
 	AttributeSet = CreateDefaultSubobject<UAG_AttributeSetBase>(TEXT("AttributeSet"));
 
 	FootstepsComponent = CreateDefaultSubobject<UFootstepsComponent>(TEXT("FootstepsComponent"));
+}
+
+void AActionGameCharacter::BeginPlay()
+{
+	Super::BeginPlay();
 }
 
 void AActionGameCharacter::PostInitializeComponents()
@@ -120,6 +125,10 @@ void AActionGameCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 		// Crouching
 		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Started, this, &AActionGameCharacter::DoCrouchActivate);
 		EnhancedInputComponent->BindAction(CrouchAction, ETriggerEvent::Completed, this, &AActionGameCharacter::DoCrouchCancel);
+
+		// Sprinting
+		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this, &AActionGameCharacter::DoSprintActivate);
+		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &AActionGameCharacter::DoSprintCancel);
 	}
 	else
 	{
@@ -216,6 +225,24 @@ void AActionGameCharacter::DoCrouchCancel()
 
 	FGameplayTagContainer TempTags;
 	TempTags.AddTag(CrouchAbilityTag);
+	AbilitySystemComponent->CancelAbilities(&TempTags);
+}
+
+void AActionGameCharacter::DoSprintActivate()
+{
+	if (!AbilitySystemComponent) return;
+
+	FGameplayTagContainer TempTags;
+	TempTags.AddTag(SprintAbilityTag);
+	AbilitySystemComponent->TryActivateAbilitiesByTag(FGameplayTagContainer(TempTags));
+}
+
+void AActionGameCharacter::DoSprintCancel()
+{
+	if (!AbilitySystemComponent) return;
+
+	FGameplayTagContainer TempTags;
+	TempTags.AddTag(SprintAbilityTag);
 	AbilitySystemComponent->CancelAbilities(&TempTags);
 }
 

@@ -39,9 +39,15 @@ public:
 	FGameplayAttributeData MaxStamina;
 	ATTRIBUTE_ACCESSORS(UAG_AttributeSetBase, MaxStamina)
 
-	UPROPERTY(BlueprintReadOnly, Category = "MovementSpeed", ReplicatedUsing = OnRep_MaxMovementSpeed)
-	FGameplayAttributeData MaxMovementSpeed;
-	ATTRIBUTE_ACCESSORS(UAG_AttributeSetBase, MaxMovementSpeed)
+	UPROPERTY(BlueprintReadOnly, Category = "Movement", ReplicatedUsing = OnRep_BaseMoveSpeed)
+	FGameplayAttributeData BaseMoveSpeed;
+	ATTRIBUTE_ACCESSORS(UAG_AttributeSetBase, BaseMoveSpeed)
+
+	UPROPERTY(BlueprintReadOnly, Category = "Movement", ReplicatedUsing = OnRep_MoveSpeedMultiplier)
+	FGameplayAttributeData MoveSpeedMultiplier;
+	ATTRIBUTE_ACCESSORS(UAG_AttributeSetBase, MoveSpeedMultiplier)
+
+
 
 protected:
 	// 修改Attribute后的纠错函数
@@ -64,5 +70,9 @@ protected:
 	virtual void OnRep_MaxStamina(const FGameplayAttributeData& OldMaxStamina);
 
 	UFUNCTION()
-	virtual void OnRep_MaxMovementSpeed(const FGameplayAttributeData& OldMaxMovementSpeed);
+	virtual void OnRep_BaseMoveSpeed(const FGameplayAttributeData& OldBaseMoveSpeed);
+
+	UFUNCTION()
+	virtual void OnRep_MoveSpeedMultiplier(const FGameplayAttributeData& OldMoveSpeedMultipiler);
+
 };

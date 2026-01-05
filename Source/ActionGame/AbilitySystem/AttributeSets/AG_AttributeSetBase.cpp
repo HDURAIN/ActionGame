@@ -15,18 +15,18 @@ void UAG_AttributeSetBase::PostGameplayEffectExecute(const FGameplayEffectModCal
 	{
 		SetHealth(FMath::Clamp(GetHealth(), 0.f, GetMaxHealth()));
 	}
-	else if (Data.EvaluatedData.Attribute == GetMaxMovementSpeedAttribute())
+	/*else if (Data.EvaluatedData.Attribute == GetBaseMoveSpeedAttribute())
 	{
 		ACharacter* OwningCharacter = Cast<ACharacter>(GetOwningActor());
 		UCharacterMovementComponent* CharacterMovement = OwningCharacter ? OwningCharacter->GetCharacterMovement() : nullptr;
 
 		if (CharacterMovement)
 		{
-			const float MaxSpeed = GetMaxMovementSpeed();
+			const float MaxSpeed = GetBaseMoveSpeed();
 
 			CharacterMovement->MaxWalkSpeed = MaxSpeed;
 		}
-	}
+	}*/
 }
 
 void UAG_AttributeSetBase::OnRep_Health(const FGameplayAttributeData& OldHealth)
@@ -50,9 +50,14 @@ void UAG_AttributeSetBase::OnRep_MaxStamina(const FGameplayAttributeData& OldMax
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UAG_AttributeSetBase, MaxStamina, OldMaxStamina);
 }
 
-void UAG_AttributeSetBase::OnRep_MaxMovementSpeed(const FGameplayAttributeData& OldMaxMovementSpeed)
+void UAG_AttributeSetBase::OnRep_BaseMoveSpeed(const FGameplayAttributeData& OldBaseMoveSpeed)
 {
-	GAMEPLAYATTRIBUTE_REPNOTIFY(UAG_AttributeSetBase, MaxMovementSpeed, OldMaxMovementSpeed);
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UAG_AttributeSetBase, BaseMoveSpeed, OldBaseMoveSpeed);
+}
+
+void UAG_AttributeSetBase::OnRep_MoveSpeedMultiplier(const FGameplayAttributeData& OldMoveSpeedMultipiler)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UAG_AttributeSetBase, MoveSpeedMultiplier, OldMoveSpeedMultipiler);
 }
 
 void UAG_AttributeSetBase::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
@@ -65,5 +70,6 @@ void UAG_AttributeSetBase::GetLifetimeReplicatedProps(TArray<class FLifetimeProp
 	DOREPLIFETIME_CONDITION_NOTIFY(UAG_AttributeSetBase, MaxHealth, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UAG_AttributeSetBase, Stamina, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UAG_AttributeSetBase, MaxStamina, COND_None, REPNOTIFY_Always);
-	DOREPLIFETIME_CONDITION_NOTIFY(UAG_AttributeSetBase, MaxMovementSpeed, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UAG_AttributeSetBase, BaseMoveSpeed, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UAG_AttributeSetBase, MoveSpeedMultiplier, COND_None, REPNOTIFY_Always);
 }
