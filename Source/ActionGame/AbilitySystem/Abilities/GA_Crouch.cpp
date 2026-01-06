@@ -65,9 +65,6 @@ void UGA_Crouch::ActivateAbility(
 			CrouchEffectHandle = ActorInfo->AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
 		}
 	}
-
-	// 与 Jump 不同 Crouch 由 输入 / Character 触发结束
-	// 不会 直接EndAbility
 }
 
 void UGA_Crouch::EndAbility(

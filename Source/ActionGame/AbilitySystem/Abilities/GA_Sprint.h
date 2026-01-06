@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Abilities/GameplayAbility.h"
 #include "GameplayEffectTypes.h"
+#include "Abilities/Tasks/AbilityTask_WaitInputRelease.h"
 #include "GA_Sprint.generated.h"
 
 class UGameplayEffect;

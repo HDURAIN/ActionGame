@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "AbilitySystemComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include <Abilities/Tasks/AbilityTask_WaitGameplayEvent.h>
 
 UGA_Sprint::UGA_Sprint()
 {
@@ -22,20 +23,25 @@ void UGA_Sprint::ActivateAbility(
 {
 	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
 
+	// 参数校验
 	if (!ActorInfo || !ActorInfo->AvatarActor.IsValid())
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
 
+	// 权限校验
 	if (!HasAuthorityOrPredictionKey(ActorInfo, &ActivationInfo))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
 
-	if (SprintEffectHandle.IsValid())
+
+	// Commit成功校验
+	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
 
@@ -47,12 +53,7 @@ void UGA_Sprint::ActivateAbility(
 		return;
 	}
 
-	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
-
+	// Apply Effect
 	if (SprintStateEffect && ActorInfo->AbilitySystemComponent.IsValid())
 	{
 		FGameplayEffectContextHandle EffectContext = ActorInfo->AbilitySystemComponent->MakeEffectContext();
