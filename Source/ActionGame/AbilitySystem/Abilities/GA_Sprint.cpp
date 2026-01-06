@@ -9,6 +9,7 @@
 
 UGA_Sprint::UGA_Sprint()
 {
+	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 }
 
@@ -30,6 +31,11 @@ void UGA_Sprint::ActivateAbility(
 	if (!HasAuthorityOrPredictionKey(ActorInfo, &ActivationInfo))
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+
+	if (SprintEffectHandle.IsValid())
+	{
 		return;
 	}
 
