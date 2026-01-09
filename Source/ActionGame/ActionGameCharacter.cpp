@@ -30,7 +30,7 @@
 AActionGameCharacter::AActionGameCharacter(const FObjectInitializer& ObjectInitializer) :
 	Super(ObjectInitializer.SetDefaultSubobjectClass<UAG_CharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
@@ -263,9 +263,9 @@ void AActionGameCharacter::GiveAbilities()
 {
 	if (HasAuthority() && AbilitySystemComponent)
 	{
-		for (auto DefualtAbiltiy : CharacterData.Abilities)
+		for (auto DefaultAbiltiy : CharacterData.Abilities)
 		{
-			AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(DefualtAbiltiy));
+			AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(DefaultAbiltiy));
 		}
 	}
 }
