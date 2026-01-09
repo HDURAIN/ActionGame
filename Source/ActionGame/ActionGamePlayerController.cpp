@@ -5,36 +5,25 @@
 #include "EnhancedInputSubsystems.h"
 #include "Engine/LocalPlayer.h"
 #include "InputMappingContext.h"
-#include "Blueprint/UserWidget.h"
 #include "ActionGame.h"
-#include "Widgets/Input/SVirtualJoystick.h"
 
-void AActionGamePlayerController::BeginPlay()
+void AActionGamePlayerController::ApplyDefaultMappings()
 {
-	Super::BeginPlay();
+	ULocalPlayer* LP = GetLocalPlayer();
+	if (!LP) return;
 
-	// only spawn touch controls on local player controllers
-	if (SVirtualJoystick::ShouldDisplayTouchInterface() && IsLocalPlayerController())
+	UEnhancedInputLocalPlayerSubsystem* Subsystem =
+		ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(LP);
+	if (!Subsystem) return;
+
+	Subsystem->ClearAllMappings();
+
+	for (UInputMappingContext* Context : DefaultMappingContexts)
 	{
-		// spawn the mobile controls widget
-		MobileControlsWidget = CreateWidget<UUserWidget>(this, MobileControlsWidgetClass);
-
-		if (MobileControlsWidget)
+		if (Context)
 		{
-			// add the controls to the player screen
-			MobileControlsWidget->AddToPlayerScreen(0);
-
-		} else {
-
-			UE_LOG(LogActionGame, Error, TEXT("Could not spawn mobile controls widget."));
-
+			Subsystem->AddMappingContext(Context, 0);
 		}
-
 	}
 }
 
-void AActionGamePlayerController::SetupInputComponent()
-{
-	Super::SetupInputComponent();
-
-}

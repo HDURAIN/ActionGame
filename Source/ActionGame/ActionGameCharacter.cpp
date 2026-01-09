@@ -143,17 +143,10 @@ void AActionGameCharacter::PawnClientRestart()
 	// 确保对象是客户端本地的Pawn而不是服务器和其他客户端上的
 	if (!IsLocallyControlled()) return;
 
-	APlayerController* PC = Cast<APlayerController>(GetController()); if (!PC) return;
-
-	ULocalPlayer* LP = PC->GetLocalPlayer(); if (!LP) return;
-
-	UEnhancedInputLocalPlayerSubsystem* Subsystem =
-		ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(LP);
-
-	if (!Subsystem || !DefaultInputMappingContext) return;
-
-	Subsystem->ClearAllMappings();
-	Subsystem->AddMappingContext(DefaultInputMappingContext, 0);
+	if (AActionGamePlayerController* PC = Cast<AActionGamePlayerController>(GetController()))
+	{
+		PC->ApplyDefaultMappings();
+	}
 }
 
 void AActionGameCharacter::Landed(const FHitResult& Hit)

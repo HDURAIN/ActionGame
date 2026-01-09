@@ -72,11 +72,8 @@ protected: // Input
 	UPROPERTY(EditAnywhere, Category="Input")
 	UInputAction* CrouchAction;
 
-	UPROPERTY(EditAnywhere, Category="Input")
+	UPROPERTY(EditAnywhere, Category = "Input")
 	UInputAction* SprintAction;
-
-	UPROPERTY(EditAnywhere, Category="Input")
-	TObjectPtr<UInputMappingContext> DefaultInputMappingContext;
 
 protected: // Input
 
