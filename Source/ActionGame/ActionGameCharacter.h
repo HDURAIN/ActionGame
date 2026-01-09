@@ -22,6 +22,8 @@ class UFootstepsComponent;
 class UInputAction;
 class UInputMappingContext;
 class UInputAction;
+class UItemContainerComponent;
+class UDA_Item;
 struct FInputActionValue;
 
 
@@ -192,5 +194,11 @@ protected:	// Gameplay Tags
 
 	UPROPERTY(EditDefaultsOnly)
 	FGameplayTagContainer InAirTags;
+
+protected: // Item
+	TObjectPtr<UItemContainerComponent> ItemContainerComponent;
+
+	UPROPERTY(EditDefaultsOnly, Category="Test")
+	TObjectPtr<UDA_Item> TestStartupItem;
 };
 

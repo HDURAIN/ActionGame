@@ -18,6 +18,9 @@
 #include "AbilitySystem/AttributeSets/AG_AttributeSetBase.h"
 #include "AbilitySystem/Components/AG_AbilitySystemComponentBase.h"
 
+#include "ActorComponents/ItemContainerComponent.h"
+#include "DataAssets/DA_Item.h"
+
 #include "ActorComponents/AG_CharacterMovementComponent.h"
 #include "ActorComponents/FootstepsComponent.h"
 #include "DataAssets/CharacterDataAsset.h"
@@ -76,6 +79,8 @@ AActionGameCharacter::AActionGameCharacter(const FObjectInitializer& ObjectIniti
 	AttributeSet = CreateDefaultSubobject<UAG_AttributeSetBase>(TEXT("AttributeSet"));
 
 	FootstepsComponent = CreateDefaultSubobject<UFootstepsComponent>(TEXT("FootstepsComponent"));
+
+	ItemContainerComponent =CreateDefaultSubobject<UItemContainerComponent>(TEXT("ItemContainerComponent"));
 }
 
 void AActionGameCharacter::BeginPlay()
@@ -292,6 +297,15 @@ void AActionGameCharacter::PossessedBy(AController* NewController)
 
 	GiveAbilities();
 	ApplyStartupEffects();
+
+	if (TestStartupItem)
+	{
+		if (UItemContainerComponent* ItemContainer =
+			FindComponentByClass<UItemContainerComponent>())
+		{
+			ItemContainer->AddItem(TestStartupItem, 3);
+		}
+	}
 }
 
 void AActionGameCharacter::OnRep_PlayerState()
