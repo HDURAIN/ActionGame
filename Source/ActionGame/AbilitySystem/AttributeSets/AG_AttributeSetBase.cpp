@@ -60,6 +60,11 @@ void UAG_AttributeSetBase::OnRep_MoveSpeedMultiplier(const FGameplayAttributeDat
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UAG_AttributeSetBase, MoveSpeedMultiplier, OldMoveSpeedMultipiler);
 }
 
+void UAG_AttributeSetBase::OnRep_MaxJumpCount(const FGameplayAttributeData& OldMaxJumpCount)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UAG_AttributeSetBase, MaxJumpCount, OldMaxJumpCount);
+}
+
 void UAG_AttributeSetBase::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -72,4 +77,5 @@ void UAG_AttributeSetBase::GetLifetimeReplicatedProps(TArray<class FLifetimeProp
 	DOREPLIFETIME_CONDITION_NOTIFY(UAG_AttributeSetBase, MaxStamina, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UAG_AttributeSetBase, BaseMoveSpeed, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UAG_AttributeSetBase, MoveSpeedMultiplier, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UAG_AttributeSetBase, MaxJumpCount, COND_None, REPNOTIFY_Always);
 }

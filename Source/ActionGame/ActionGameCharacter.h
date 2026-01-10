@@ -8,6 +8,7 @@
 #include "AbilitySystemInterface.h"
 #include "Logging/LogMacros.h"
 #include "ActionGameTypes.h"
+#include "AbilitySystemComponent.h"
 #include "ActionGameCharacter.generated.h"
 
 class UAG_AbilitySystemComponentBase;
@@ -199,6 +200,18 @@ protected: // Item
 	TObjectPtr<UItemContainerComponent> ItemContainerComponent;
 
 	UPROPERTY(EditDefaultsOnly, Category="Test")
-	TObjectPtr<UDA_Item> TestStartupItem;
+	TObjectPtr<UDA_Item> TestStartupItem_SpeedUp;
+
+	UPROPERTY(EditDefaultsOnly, Category="Test")
+	TObjectPtr<UDA_Item> TestStartupItem_MoreJump;
+
+public: // Attribute
+	virtual void OnMaxJumpCountChanged(const FOnAttributeChangeData& Data);
+
+	FDelegateHandle MaxJumpCountChangedHandle;
+
+	void BindASCAttributeDelegates();
+
+	void UnbindASCAttributeDelegates();
 };
 

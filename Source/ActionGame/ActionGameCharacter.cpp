@@ -193,7 +193,6 @@ void AActionGameCharacter::DoLook(const FInputActionValue& Value)
 
 void AActionGameCharacter::DoJumpStart()
 {
-	UE_LOG(LogTemp, Warning, TEXT("DoJumpStart fired"));
 	// 向 AbilitySystemComponent 发送一个 Gameplay Event
 	FGameplayEventData Payload;
 	Payload.Instigator = this;
@@ -242,6 +241,49 @@ void AActionGameCharacter::DoSprintCancel()
 	FGameplayTagContainer TempTags;
 	TempTags.AddTag(SprintAbilityTag);
 	AbilitySystemComponent->CancelAbilities(&TempTags);
+}
+
+void AActionGameCharacter::OnMaxJumpCountChanged(const FOnAttributeChangeData& Data)
+{
+	const int32 NewJumpCount = FMath::Max(1, FMath::FloorToInt(Data.NewValue));
+	JumpMaxCount = NewJumpCount;
+}
+
+void AActionGameCharacter::BindASCAttributeDelegates()
+{
+	if (!AbilitySystemComponent)
+	{
+		return;
+	}
+
+	// 先解绑，保证幂等（不会重复绑定）
+	UnbindASCAttributeDelegates();
+
+	MaxJumpCountChangedHandle =
+		AbilitySystemComponent
+		->GetGameplayAttributeValueChangeDelegate(
+			UAG_AttributeSetBase::GetMaxJumpCountAttribute()
+		)
+		.AddUObject(this, &AActionGameCharacter::OnMaxJumpCountChanged);
+}
+
+void AActionGameCharacter::UnbindASCAttributeDelegates()
+{
+	if (!AbilitySystemComponent)
+	{
+		return;
+	}
+
+	if (MaxJumpCountChangedHandle.IsValid())
+	{
+		AbilitySystemComponent
+			->GetGameplayAttributeValueChangeDelegate(
+				UAG_AttributeSetBase::GetMaxJumpCountAttribute()
+			)
+			.Remove(MaxJumpCountChangedHandle);
+
+		MaxJumpCountChangedHandle.Reset();
+	}
 }
 
 bool AActionGameCharacter::ApplyGameplayEffectToSelf(TSubclassOf<UGameplayEffect> Effect, FGameplayEffectContextHandle InEffectContext)
@@ -294,16 +336,28 @@ void AActionGameCharacter::PossessedBy(AController* NewController)
 	Super::PossessedBy(NewController);
 
 	AbilitySystemComponent->InitAbilityActorInfo(this, this);
+	UE_LOG(LogTemp, Warning, TEXT("PossessedBy InitAbilityActorInfo Completed"));
 
 	GiveAbilities();
 	ApplyStartupEffects();
 
-	if (TestStartupItem)
+	if (TestStartupItem_SpeedUp)
 	{
 		if (UItemContainerComponent* ItemContainer =
 			FindComponentByClass<UItemContainerComponent>())
 		{
-			ItemContainer->AddItem(TestStartupItem, 3);
+			ItemContainer->AddItem(TestStartupItem_SpeedUp, 3);
+		}
+	}
+
+	BindASCAttributeDelegates();
+
+	if (TestStartupItem_MoreJump)
+	{	
+		if (UItemContainerComponent* ItemContainer =
+			FindComponentByClass<UItemContainerComponent>())
+		{
+			ItemContainer->AddItem(TestStartupItem_MoreJump, 3);
 		}
 	}
 }
@@ -314,6 +368,8 @@ void AActionGameCharacter::OnRep_PlayerState()
 
 	// 告诉ASC谁拥有它，作用到谁身上
 	AbilitySystemComponent->InitAbilityActorInfo(this, this);
+	UE_LOG(LogTemp, Warning, TEXT("OnRep_PlayerState InitAbilityActorInfo Completed"));
+
 }
 
 FCharacterData AActionGameCharacter::GetCharacterData() const

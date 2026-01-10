@@ -32,32 +32,15 @@ bool UGA_Jump::CanActivateAbility(
 	// - 是否处于 Cooldown
 	// - 是否能支付 Cost
 	// - ASC / Avatar 是否有效
-	if (!Super::CanActivateAbility(
+
+
+
+	return Super::CanActivateAbility(
 		Handle,
 		ActorInfo,
 		SourceTags,
 		TargetTags,
-		OptionalRelevantTags))
-	{
-		return false;
-	}
-
-	// 获取物理 Avatar（Character）
-	const ACharacter* Character =
-		Cast<ACharacter>(ActorInfo->AvatarActor.Get());
-
-	// Avatar 不存在时不可激活
-	if (!Character)
-	{
-		return false;
-	}
-
-	// 物理层跳跃合法性判断：
-	// - 是否在地面
-	// - JumpMaxCount
-	// - MovementMode
-	// - crouch 等
-	return Character->CanJump();
+		OptionalRelevantTags);
 }
 
 

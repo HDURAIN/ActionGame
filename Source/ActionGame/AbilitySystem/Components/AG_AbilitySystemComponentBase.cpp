@@ -13,6 +13,8 @@
 
 void UAG_AbilitySystemComponentBase::ApplyItem(const UDA_Item* Item, int32 OldCount, int32 NewCount)
 {
+	UE_LOG(LogTemp, Warning, (TEXT("APPLY ITEM")));
+
 	if (!Item)
 	{
 		return;

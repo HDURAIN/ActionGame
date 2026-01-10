@@ -40,6 +40,7 @@ void UItemContainerComponent::InitializeAbilitySystemComponent()
 
 bool UItemContainerComponent::AddItem(UDA_Item* Item, int32 Count)
 {
+	UE_LOG(LogTemp, Warning, (TEXT("ADD ITEM")));
 	if (!Item || Count <= 0)
 	{
 		return false;

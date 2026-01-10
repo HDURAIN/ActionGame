@@ -47,7 +47,9 @@ public:
 	FGameplayAttributeData MoveSpeedMultiplier;
 	ATTRIBUTE_ACCESSORS(UAG_AttributeSetBase, MoveSpeedMultiplier)
 
-
+	UPROPERTY(BlueprintReadOnly, Category = "Jump", ReplicatedUsing = OnRep_MaxJumpCount)
+	FGameplayAttributeData MaxJumpCount;
+	ATTRIBUTE_ACCESSORS(UAG_AttributeSetBase, MaxJumpCount)
 
 protected:
 	// 修改Attribute后的纠错函数
@@ -75,4 +77,6 @@ protected:
 	UFUNCTION()
 	virtual void OnRep_MoveSpeedMultiplier(const FGameplayAttributeData& OldMoveSpeedMultipiler);
 
+	UFUNCTION()
+	virtual void OnRep_MaxJumpCount(const FGameplayAttributeData& OldMaxJumpCount);
 };
