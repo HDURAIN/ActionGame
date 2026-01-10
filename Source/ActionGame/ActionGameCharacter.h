@@ -57,26 +57,29 @@ private: // Camera
 protected: // Input
 
 	/** Jump Input Action */
-	UPROPERTY(EditAnywhere, Category="Input")
+	UPROPERTY(EditAnywhere, Category = "Input")
 	UInputAction* JumpAction;
 
 	/** Move Input Action */
-	UPROPERTY(EditAnywhere, Category="Input")
+	UPROPERTY(EditAnywhere, Category = "Input")
 	UInputAction* MoveAction;
 
 	/** Look Input Action */
-	UPROPERTY(EditAnywhere, Category="Input")
+	UPROPERTY(EditAnywhere, Category = "Input")
 	UInputAction* LookAction;
 
 	/** Mouse Look Input Action */
-	UPROPERTY(EditAnywhere, Category="Input")
+	UPROPERTY(EditAnywhere, Category = "Input")
 	UInputAction* MouseLookAction;
 
-	UPROPERTY(EditAnywhere, Category="Input")
+	UPROPERTY(EditAnywhere, Category = "Input")
 	UInputAction* CrouchAction;
 
 	UPROPERTY(EditAnywhere, Category = "Input")
 	UInputAction* SprintAction;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	UInputAction* InteractAction;
 
 protected: // Input
 
@@ -112,6 +115,9 @@ public: // Input
 
 	UFUNCTION(BlueprintCallable, Category = "Input")
 	virtual void DoSprintCancel();
+
+	UFUNCTION(BlueprintCallable, Category = "Input")
+	virtual void DoInteract();
 
 public: // Camera
 
@@ -156,6 +162,9 @@ protected: // Ability System
 
 	UPROPERTY(EditDefaultsOnly, Category = "Abilities|Tags")
 	FGameplayTag SprintAbilityTag;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Abilities|Tags")
+	FGameplayTag InteractAbilityTag;
 
 public: // Data Assets
 	

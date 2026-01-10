@@ -134,6 +134,9 @@ void AActionGameCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 		// Sprinting
 		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this, &AActionGameCharacter::DoSprintActivate);
 		EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &AActionGameCharacter::DoSprintCancel);
+
+		// Interacting
+		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &AActionGameCharacter::DoInteract);
 	}
 	else
 	{
@@ -243,6 +246,15 @@ void AActionGameCharacter::DoSprintCancel()
 	AbilitySystemComponent->CancelAbilities(&TempTags);
 }
 
+void AActionGameCharacter::DoInteract()
+{
+	UE_LOG(LogTemp, Warning, TEXT("DoInteract"));
+	if (!AbilitySystemComponent) return;
+	FGameplayTagContainer TempTags;
+	TempTags.AddTag(InteractAbilityTag);
+	AbilitySystemComponent->TryActivateAbilitiesByTag(FGameplayTagContainer(TempTags));
+}
+
 void AActionGameCharacter::OnMaxJumpCountChanged(const FOnAttributeChangeData& Data)
 {
 	const int32 NewJumpCount = FMath::Max(1, FMath::FloorToInt(Data.NewValue));
@@ -341,14 +353,14 @@ void AActionGameCharacter::PossessedBy(AController* NewController)
 	GiveAbilities();
 	ApplyStartupEffects();
 
-	if (TestStartupItem_SpeedUp)
+	/*if (TestStartupItem_SpeedUp)
 	{
 		if (UItemContainerComponent* ItemContainer =
 			FindComponentByClass<UItemContainerComponent>())
 		{
 			ItemContainer->AddItem(TestStartupItem_SpeedUp, 3);
 		}
-	}
+	}*/
 
 	BindASCAttributeDelegates();
 
