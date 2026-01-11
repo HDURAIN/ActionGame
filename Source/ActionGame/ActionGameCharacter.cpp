@@ -353,25 +353,7 @@ void AActionGameCharacter::PossessedBy(AController* NewController)
 	GiveAbilities();
 	ApplyStartupEffects();
 
-	/*if (TestStartupItem_SpeedUp)
-	{
-		if (UItemContainerComponent* ItemContainer =
-			FindComponentByClass<UItemContainerComponent>())
-		{
-			ItemContainer->AddItem(TestStartupItem_SpeedUp, 3);
-		}
-	}*/
-
 	BindASCAttributeDelegates();
-
-	if (TestStartupItem_MoreJump)
-	{	
-		if (UItemContainerComponent* ItemContainer =
-			FindComponentByClass<UItemContainerComponent>())
-		{
-			ItemContainer->AddItem(TestStartupItem_MoreJump, 3);
-		}
-	}
 }
 
 void AActionGameCharacter::OnRep_PlayerState()
