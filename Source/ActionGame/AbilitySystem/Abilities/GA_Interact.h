@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Abilities/GameplayAbility.h"
+#include "ActionGameTypes.h"
 #include "GA_Interact.generated.h"
 
 class UInteractable;
@@ -33,8 +34,10 @@ protected:
 	// 目标选择
 	AActor* FindBestInteractableTarget(const FGameplayAbilityActorInfo* ActorInfo) const;
 
+
 	// 对目标执行一次交互流程
 	void TryInteractWithTarget(const FGameplayAbilityActorInfo* ActorInfo, AActor* TargetActor) const;
+
 
 protected:
 	// 可调参数
@@ -43,5 +46,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Interaction")
 	float InteractDistance = 250.0f;
 
+	// 射线长度
+	UPROPERTY(EditDefaultsOnly, Category = "Interaction")
 	float TraceDistance = 2000.0f;
 };

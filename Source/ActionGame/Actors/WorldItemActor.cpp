@@ -5,6 +5,8 @@
 
 #include "Components/StaticMeshComponent.h"
 #include "Components/SphereComponent.h"
+#include "Components/BoxComponent.h"
+#include "Components/SceneComponent.h"
 
 #include "DataAssets/DA_Item.h"
 #include "ActorComponents/ItemContainerComponent.h"
@@ -19,20 +21,26 @@ AWorldItemActor::AWorldItemActor()
 
 	bReplicates = true;
 
-	// 碰撞组件 用于 Trace 和 Overlap
-	CollisionComponent = CreateDefaultSubobject<USphereComponent>(TEXT("Collision"));
-	SetRootComponent(CollisionComponent);
+	// 场景根组件
+	SceneRootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
+	SetRootComponent(SceneRootComponent);
 
-	CollisionComponent->InitSphereRadius(50.f);
-	CollisionComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	CollisionComponent->SetCollisionProfileName(TEXT("OverlapAll"));
+	// 碰撞组件 用于判断与Pawn的Overlap
+	OverlapSphereComponent = CreateDefaultSubobject<USphereComponent>(TEXT("Overlap"));
+	OverlapSphereComponent->SetupAttachment(RootComponent);
+	OverlapSphereComponent->InitSphereRadius(50.f);
+	OverlapSphereComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	OverlapSphereComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
+	OverlapSphereComponent->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+	OverlapSphereComponent->SetGenerateOverlapEvents(true);
 
-	// Mesh 仅作表现
+	// Mesh 外观表现 + 阻挡射线
 	MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
-	MeshComponent->SetupAttachment(CollisionComponent);
-	MeshComponent->SetCollisionResponseToAllChannels(ECR_Block);
-	MeshComponent->SetCollisionResponseToChannel(ECC_Pawn, ECR_Ignore);
-	MeshComponent->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+	MeshComponent->SetupAttachment(RootComponent);
+	MeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
+	MeshComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
+	MeshComponent->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Block);
+	MeshComponent->ComponentTags.Add(InteractTags::InteractTarget);
 }
 
 // Called when the game starts or when spawned
@@ -59,7 +67,6 @@ bool AWorldItemActor::CanInteract_Implementation(AActor* Interactor) const
 		return false;
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("CanInteract_Implementation return true"));
 	return true;
 }
 
@@ -75,7 +82,6 @@ void AWorldItemActor::ExecuteInteract_Implementation(AActor* Interactor)
 		return;
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("Call [AWorldItemActor::ExecuteInteract_Implementation]"));
 	// 尝试把物品交给交互者
 	const bool bGiven = GiveItemTo(Interactor);
 	if (!bGiven)
@@ -84,6 +90,11 @@ void AWorldItemActor::ExecuteInteract_Implementation(AActor* Interactor)
 	}
 
 	ConsumeAndDestroy();
+}
+
+EInteractType AWorldItemActor::GetInteractType_Implementation() const
+{
+	return InteractType;
 }
 
 bool AWorldItemActor::GiveItemTo(AActor* Interactor)
@@ -125,5 +136,20 @@ void AWorldItemActor::ConsumeAndDestroy()
 	SetActorHiddenInGame(true);
 
 	Destroy();
+}
+
+void AWorldItemActor::InitWithItemData(UDA_Item* InItemDef)
+{
+	if (ItemDef)
+	{
+		return;
+	}
+
+	if (!InItemDef)
+	{
+		return;
+	}
+
+	ItemDef = InItemDef;
 }
 

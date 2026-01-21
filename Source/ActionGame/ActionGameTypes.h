@@ -45,3 +45,16 @@ enum class EFoot : uint8
 	Left UMETA(DisplayName = "Left"),
 	Right UMETA(DisplayName = "Right")
 };
+
+UENUM(BlueprintType)
+enum class EInteractType : uint8
+{
+	Pickup UMETA(DisplayName = "Pickup"),
+	Use	UMETA(DisplayName = "Use"),
+	None UMETA(DisplayName = "None")
+};
+
+namespace InteractTags
+{
+	static const FName InteractTarget(TEXT("InteractTarget"));
+}

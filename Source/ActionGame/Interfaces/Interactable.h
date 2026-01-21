@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
+#include "ActionGameTypes.h"
 #include "Interactable.generated.h"
 
 // This class does not need to be modified.
@@ -27,4 +28,7 @@ public:
 
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Interaction")
 	void ExecuteInteract(AActor* Interactor);
+
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "Interaction")
+	EInteractType GetInteractType() const;
 };

@@ -4,12 +4,14 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "ActionGameTypes.h"
 #include "Interfaces/Interactable.h"
 #include "WorldItemActor.generated.h"
 
 class UDA_Item;
 class UStaticMeshComponent;
 class USphereComponent;
+class UBoxComponent;
 
 UCLASS()
 class ACTIONGAME_API AWorldItemActor : public AActor, public IInteractable
@@ -23,6 +25,7 @@ public:
 	// Interactable
 	virtual bool CanInteract_Implementation(AActor* Interactor) const override;
 	virtual void ExecuteInteract_Implementation(AActor* Interactor) override;
+	virtual EInteractType GetInteractType_Implementation() const override;
 
 	UFUNCTION(BlueprintCallable, Category = "Item")
 	UDA_Item* GetItemDef() const { return ItemDef; }
@@ -33,10 +36,13 @@ protected:
 
 	// Components
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+	TObjectPtr<USceneComponent> SceneRootComponent;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UStaticMeshComponent> MeshComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	TObjectPtr<USphereComponent> CollisionComponent;
+	TObjectPtr<USphereComponent> OverlapSphereComponent;
 
 	// Definition
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
@@ -49,4 +55,12 @@ protected:
 	bool GiveItemTo(AActor* Interactor);
 
 	void ConsumeAndDestroy();
+
+
+protected:
+	UPROPERTY(EditDefaultsOnly, Category = "Interaction")
+	EInteractType InteractType = EInteractType::Pickup;
+
+public:
+	void InitWithItemData(UDA_Item* InItemDef);
 };

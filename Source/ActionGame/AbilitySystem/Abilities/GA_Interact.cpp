@@ -10,6 +10,7 @@
 #include "GameFramework/Character.h"
 #include "GameFramework/PlayerController.h"
 #include "Engine/World.h"
+#include "Components/PrimitiveComponent.h"
 
 UGA_Interact::UGA_Interact()
 {
@@ -54,11 +55,11 @@ void UGA_Interact::ActivateAbility(const FGameplayAbilitySpecHandle Handle, cons
 
 /*
 * 不做： AddItem Destroy 改状态
-* 只做：Trace 距离 接口判断
 * 无副作用 Client和Server都可以调用
 */
 AActor* UGA_Interact::FindBestInteractableTarget(const FGameplayAbilityActorInfo* ActorInfo) const
 {	
+	// 基础校验
 	if (!ActorInfo || !ActorInfo->AvatarActor.IsValid())
 	{
 		return nullptr;
@@ -71,9 +72,7 @@ AActor* UGA_Interact::FindBestInteractableTarget(const FGameplayAbilityActorInfo
 		return nullptr;
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("Call [FindBestInteractableTarget]"));
-
-	// 使用视线进行一次 LineTrace
+	// 获取视角
 	FVector ViewLocation;
 	FRotator ViewRotation;
 
@@ -83,68 +82,52 @@ AActor* UGA_Interact::FindBestInteractableTarget(const FGameplayAbilityActorInfo
 	}
 	else
 	{
-		// 兜底：没有PC时使用角色朝向
 		ViewLocation = Avatar->GetActorLocation();
 		ViewRotation = Avatar->GetActorRotation();
 	}
 
-	ACharacter* Character = Cast<ACharacter>(ActorInfo->AvatarActor.Get());
-	if (!Character)
-	{
-		return nullptr;
-	}
-
-	UCameraComponent* Camera = Character->FindComponentByClass<UCameraComponent>();
-	if (!Camera)
-	{
-		return nullptr;
-	}
-
-	const FVector TraceStart = Camera->GetComponentLocation();
-	const FVector TraceEnd = TraceStart + Camera->GetForwardVector() * TraceDistance;
+	const FVector TraceStart = ViewLocation;
+	const FVector TraceEnd = TraceStart + ViewRotation.Vector() * TraceDistance;
 
 	FCollisionQueryParams Params(SCENE_QUERY_STAT(GA_Interact), false);
 	Params.AddIgnoredActor(Avatar);
 
 	FHitResult Hit;
-	const bool bHit = World->LineTraceSingleByChannel(Hit, TraceStart, TraceEnd, ECC_Visibility, Params);
-	DrawDebugLine(
-		World,
+
+	// Trace Item
+	const bool bHitPickup = World->LineTraceSingleByChannel(
+		Hit,
 		TraceStart,
 		TraceEnd,
-		FColor::Red,
-		false,
-		2.0f,
-		0,
-		2.0f
+		ECC_GameTraceChannel1,
+		Params
 	);
 
-	if (!bHit)
+	if (bHitPickup)
 	{
-		return nullptr;
+		UPrimitiveComponent* HitComp = Hit.GetComponent();
+		if (HitComp && HitComp->ComponentHasTag(InteractTags::InteractTarget))
+		{
+			return HitComp->GetOwner();
+		}
 	}
 
-	AActor* HitActor = Hit.GetActor();
-	if (!HitActor)
-	{
-		return nullptr;
-	}
+	// Trace Chest
+	const bool bHitUse = World->LineTraceSingleByChannel(
+		Hit,
+		TraceStart,
+		TraceEnd,
+		ECC_GameTraceChannel2,
+		Params
+	);
 
-	const float DistSq =
-		FVector::DistSquared(
-			Avatar->GetActorLocation(),
-			HitActor->GetActorLocation()
-		);
-
-	if (DistSq > FMath::Square(InteractDistance))
+	if (bHitUse)
 	{
-		return nullptr;
-	}
-
-	// 视线命中的Actor实现了接口，就认为是可交互候选
-	if (HitActor->Implements<UInteractable>())
-	{
-		return HitActor;
+		UPrimitiveComponent* HitComp = Hit.GetComponent();
+		if (HitComp && HitComp->ComponentHasTag(InteractTags::InteractTarget))
+		{
+			return HitComp->GetOwner();
+		}
 	}
 
 	return nullptr;
@@ -165,21 +148,17 @@ void UGA_Interact::TryInteractWithTarget(const FGameplayAbilityActorInfo* ActorI
 
 	AActor* Interactor = ActorInfo->AvatarActor.Get();
 
-	// 接口判断 （Server再校验）
+	// 判断目标Actor是否实现了接口 （Server再校验）
 	if (!TargetActor->Implements<UInteractable>())
 	{
 		return;
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("UGA_Interact Call [TryInteractWithTarget]"));
-	UE_LOG(LogTemp, Warning, TEXT("UGA_Interact Call [Execute_CanInteract]"));
 	const bool bCanInteract = IInteractable::Execute_CanInteract(TargetActor, Interactor);
-
 	if (!bCanInteract)
 	{
 		return;
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("UGA_Interact Call [Execute_ExecuteInteract]"));
 	IInteractable::Execute_ExecuteInteract(TargetActor, Interactor);
 }
