@@ -42,6 +42,13 @@ public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|Display")
 	TObjectPtr<class UTexture2D> Icon = nullptr;
 
+	// 物品Mesh
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|Display")
+	TObjectPtr<UStaticMesh> WorldMesh;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item|Display")
+	TObjectPtr<UMaterialInterface> OverrideMaterial;
+
 	/* ===============================
 	 * 堆叠规则（静态）
 	 * =============================== */

@@ -38,15 +38,11 @@ public:
 	// Sets default values for this actor's properties
 	ADropVisualActor();
 
-	void StartDrop(const FVector& ForwardDirection);
-
 	void BindOnDropFinished(FOnDropFinished InDelegate);
 
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
-
-	virtual void Tick(float DeltaTime) override;
 
 protected:
 	// Components
@@ -55,26 +51,15 @@ protected:
 
 protected:
 	// Drop Logic
-	
-	// 是否已经完成掉落
-	bool bDropFinished = false;
-
 	// 掉落完成回调 实例
 	FOnDropFinished OnDropFinished;
 
-	// 内部函数：检查是否已经落地
-	void CheckDropFinished();
+	bool bDropFinished = false;
 
-	// 内部函数：处理掉落完成
-	void NotifyDropLanded(const FVector& GroundLocation);
+	UFUNCTION()
+	void OnMeshHit(UPrimitiveComponent* HitComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, FVector NormalImpulse, const FHitResult& Hit);
 
 protected:
-	// Config
-
-	// 掉落检测的最大向下距离
-	UPROPERTY(EditDefaultsOnly, Category ="Drop")
-	float GroundTraceDistance = 5000.f;
-
 	// 冲量
 	UPROPERTY(EditDefaultsOnly, Category = "Drop|Impulse")
 	float ForwardImpulse = 200.f;

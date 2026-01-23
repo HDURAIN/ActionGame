@@ -72,6 +72,7 @@ AActor* UGA_Interact::FindBestInteractableTarget(const FGameplayAbilityActorInfo
 		return nullptr;
 	}
 
+	// 检测玩家视线是否对准物体
 	// 获取视角
 	FVector ViewLocation;
 	FRotator ViewRotation;
@@ -108,7 +109,16 @@ AActor* UGA_Interact::FindBestInteractableTarget(const FGameplayAbilityActorInfo
 		UPrimitiveComponent* HitComp = Hit.GetComponent();
 		if (HitComp && HitComp->ComponentHasTag(InteractTags::InteractTarget))
 		{
-			return HitComp->GetOwner();
+			AActor* TargetActor = HitComp->GetOwner();
+
+			if (TargetActor->Implements<UInteractable>())
+			{
+				APawn* Pawn = Cast<APawn>(Avatar);
+				if (IInteractable::Execute_CanInteract(TargetActor, Pawn))
+				{
+					return TargetActor;
+				}
+			}
 		}
 	}
 
@@ -126,7 +136,16 @@ AActor* UGA_Interact::FindBestInteractableTarget(const FGameplayAbilityActorInfo
 		UPrimitiveComponent* HitComp = Hit.GetComponent();
 		if (HitComp && HitComp->ComponentHasTag(InteractTags::InteractTarget))
 		{
-			return HitComp->GetOwner();
+			AActor* TargetActor = HitComp->GetOwner();
+
+			if (TargetActor->Implements<UInteractable>())
+			{
+				APawn* Pawn = Cast<APawn>(Avatar);
+				if (IInteractable::Execute_CanInteract(TargetActor, Pawn))
+				{
+					return TargetActor;
+				}
+			}
 		}
 	}
 

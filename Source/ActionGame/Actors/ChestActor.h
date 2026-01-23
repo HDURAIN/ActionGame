@@ -15,6 +15,7 @@ class UStaticMeshComponent;
 class USphereComponent;
 class UBoxComponent;
 class AWorldItemActor;
+class UInteractableComponent;
 
 /**
  * AChestActor
@@ -55,10 +56,11 @@ protected:
 
 	// 判断角色是否进入交互区域成为候选
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interact")
-	TObjectPtr<USphereComponent> OverlapSphereComponent;
+	TObjectPtr<UInteractableComponent> InteractableComponent;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UBoxComponent> InteractTargetBox;
+
 
 protected:
 
@@ -88,6 +90,7 @@ protected: // Interact
 	void OnRep_Opened();
 
 public:	
+
 	// 掉落表现体的 class
 	UPROPERTY(EditDefaultsOnly, Category = "Drop")
 	TSubclassOf<ADropVisualActor> DropVisualClass;

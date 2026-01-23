@@ -10,6 +10,7 @@
 
 #include "DataAssets/DA_Item.h"
 #include "ActorComponents/ItemContainerComponent.h"
+#include "AbilitySystem/Components/InteractableComponent.h"
 #include "GameFramework/Actor.h"
 #include "Net/UnrealNetwork.h"
 
@@ -18,29 +19,27 @@ AWorldItemActor::AWorldItemActor()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
-
 	bReplicates = true;
 
-	// 场景根组件
-	SceneRootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
+	SceneRootComponent = CreateDefaultSubobject<USceneComponent>(TEXT("SceneRoot"));
 	SetRootComponent(SceneRootComponent);
-
-	// 碰撞组件 用于判断与Pawn的Overlap
-	OverlapSphereComponent = CreateDefaultSubobject<USphereComponent>(TEXT("Overlap"));
-	OverlapSphereComponent->SetupAttachment(RootComponent);
-	OverlapSphereComponent->InitSphereRadius(50.f);
-	OverlapSphereComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	OverlapSphereComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
-	OverlapSphereComponent->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
-	OverlapSphereComponent->SetGenerateOverlapEvents(true);
 
 	// Mesh 外观表现 + 阻挡射线
 	MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Mesh"));
 	MeshComponent->SetupAttachment(RootComponent);
+
 	MeshComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	MeshComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
-	MeshComponent->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Block);
-	MeshComponent->ComponentTags.Add(InteractTags::InteractTarget);
+	MeshComponent->SetVisibility(false, true);
+
+	InteractTargetBox = CreateDefaultSubobject<UBoxComponent>(TEXT("InteractTargetBox"));
+	InteractTargetBox->SetupAttachment(RootComponent);
+	InteractTargetBox->SetCollisionResponseToAllChannels(ECR_Ignore);
+	InteractTargetBox->SetCollisionResponseToChannel(ECC_GameTraceChannel1, ECR_Block);
+	InteractTargetBox->ComponentTags.Add(InteractTags::InteractTarget);
+	InteractTargetBox->SetBoxExtent(InteractBoxExtent);
+
+	InteractableComponent = CreateDefaultSubobject<UInteractableComponent>(TEXT("InteractableComponent"));
 }
 
 // Called when the game starts or when spawned
@@ -63,6 +62,11 @@ bool AWorldItemActor::CanInteract_Implementation(AActor* Interactor) const
 	}
 
 	if (!Interactor)
+	{
+		return false;
+	}
+
+	if (!InteractableComponent || !InteractableComponent->IsInteractorInRange(Interactor))
 	{
 		return false;
 	}
@@ -134,22 +138,65 @@ void AWorldItemActor::ConsumeAndDestroy()
 	// 先禁用交互 避免Destroy前被重复命中
 	SetActorEnableCollision(false);
 	SetActorHiddenInGame(true);
-
+	SetLifeSpan(0.1f);
 	Destroy();
 }
 
-void AWorldItemActor::InitWithItemData(UDA_Item* InItemDef)
+void AWorldItemActor::ApplyItemVisual()
 {
-	if (ItemDef)
+	if (!MeshComponent || !ItemDef)
 	{
 		return;
 	}
 
-	if (!InItemDef)
+	if (ItemDef->WorldMesh)
+	{
+		MeshComponent->SetStaticMesh(ItemDef->WorldMesh);
+
+		const FBoxSphereBounds Bounds = ItemDef->WorldMesh->GetBounds();
+		const float MeshDiameter = Bounds.BoxExtent.GetMax() * 2.f;
+
+		if (MeshDiameter > KINDA_SMALL_NUMBER)
+		{
+			const float Scale = TargetWorldSize / MeshDiameter;
+			MeshComponent->SetRelativeScale3D(FVector(Scale));
+		}
+	}
+
+	if (ItemDef->OverrideMaterial)
+	{
+		MeshComponent->SetMaterial(0, ItemDef->OverrideMaterial);
+	}
+
+	MeshComponent->SetVisibility(true, true);
+}
+
+void AWorldItemActor::OnRep_ItemDef()
+{
+	ApplyItemVisual();
+}
+
+void AWorldItemActor::OnRep_Consumed()
+{
+	SetActorHiddenInGame(true);
+	SetActorEnableCollision(false);
+}
+
+void AWorldItemActor::InitWithItemData(UDA_Item* InItemDef)
+{
+	if (ItemDef || !InItemDef)
 	{
 		return;
 	}
 
 	ItemDef = InItemDef;
+	ApplyItemVisual();
 }
 
+void AWorldItemActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
+{
+	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
+
+	DOREPLIFETIME(AWorldItemActor, ItemDef);
+	DOREPLIFETIME(AWorldItemActor, bConsumed);
+}

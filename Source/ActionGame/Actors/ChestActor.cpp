@@ -10,6 +10,7 @@
 #include "Components/SphereComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/SceneComponent.h"
+#include "AbilitySystem/Components/InteractableComponent.h"
 
 #include "Net/UnrealNetwork.h"
 
@@ -47,15 +48,7 @@ AChestActor::AChestActor()
 	InteractTargetBox->SetCollisionResponseToChannel(ECC_GameTraceChannel2, ECR_Block);
 	InteractTargetBox->ComponentTags.Add(InteractTags::InteractTarget);
 
-	// Sphere 判定球
-	OverlapSphereComponent = CreateDefaultSubobject<USphereComponent>(TEXT("Sphere"));
-	OverlapSphereComponent->SetupAttachment(RootComponent);
-	OverlapSphereComponent->InitSphereRadius(150.f);
-	// Collision
-	OverlapSphereComponent->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
-	OverlapSphereComponent->SetGenerateOverlapEvents(true);
-	OverlapSphereComponent->SetCollisionResponseToAllChannels(ECR_Ignore);
-	OverlapSphereComponent->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+	InteractableComponent = CreateDefaultSubobject<UInteractableComponent>(TEXT("InteractableComponent"));
 }
 
 // Called when the game starts or when spawned
@@ -66,8 +59,14 @@ void AChestActor::BeginPlay()
 }
 
 bool AChestActor::CanInteract_Implementation(AActor* Interactor) const
-{
-	if (bOpened) {
+{	
+	if (bOpened)
+	{
+		return false;
+	}
+
+	if (!InteractableComponent || !InteractableComponent->IsInteractorInRange(Interactor))
+	{
 		return false;
 	}
 
@@ -116,7 +115,7 @@ void AChestActor::StartDropFlow()
 	}
 
 	const FVector SpawnLocation = GetDropSpawnLocation();
-	const FRotator SpawnRotation = FRotator::ZeroRotator;
+	const FRotator SpawnRotation = GetActorRotation();
 
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.Owner = this;
@@ -128,8 +127,6 @@ void AChestActor::StartDropFlow()
 	{
 		return;
 	}
-
-	DropActor->StartDrop(GetActorForwardVector());
 
 	// 绑定掉落完成回调
 	// Chest不关心Drop的物理细节，只需要一个落地完成的GroundLocation
@@ -144,6 +141,8 @@ FVector AChestActor::GetDropSpawnLocation() const
 
 void AChestActor::HandleDropLanded(const FVector& GroundLocation)
 {
+	UE_LOG(LogTemp, Warning, TEXT("AChestActor::HandleDropLanded"));
+
 	if (!WorldItemClass || DropItems.Num() == 0)
 	{
 		return;
