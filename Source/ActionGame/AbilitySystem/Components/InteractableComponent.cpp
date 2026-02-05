@@ -3,6 +3,9 @@
 
 #include "AbilitySystem/Components/InteractableComponent.h"
 #include "Components/SphereComponent.h"
+
+#include "ActionGameCharacter.h"
+
 #include "GameFramework/Pawn.h"
 #include "GameFramework/Actor.h"
 
@@ -56,23 +59,13 @@ void UInteractableComponent::BeginPlay()
 
 	for (AActor* Actor : OverlappingActors)
 	{
-		InteractorsInRange.Add(Actor);
+		// 给一开始就在范围内的character传递本物体的指针
+		// 待添加代码 ++++++++++++++++++++++++++++++
+		if (AActionGameCharacter* Character = Cast<AActionGameCharacter>(Actor))
+		{
+			Character->AddInteractActorInRange(Owner);
+		}
 	}
-}
-
-bool UInteractableComponent::IsInteractorInRange(AActor* Interactor) const
-{
-	if (!Interactor)
-	{
-		return false;
-	}
-
-	return InteractorsInRange.Contains(Interactor);
-}
-
-const TSet<TWeakObjectPtr<AActor>>& UInteractableComponent::GetInteractorsInRange() const
-{
-	return InteractorsInRange;
 }
 
 void UInteractableComponent::OnSphereBeginOverlap(
@@ -88,10 +81,9 @@ void UInteractableComponent::OnSphereBeginOverlap(
 		return;
 	}
 
-	// 只关心 Pawn（可以按需要放宽）
-	if (OtherActor->IsA<APawn>())
+	if (AActionGameCharacter* Character = Cast<AActionGameCharacter>(OtherActor))
 	{
-		InteractorsInRange.Add(OtherActor);
+		Character->AddInteractActorInRange(GetOwner());
 	}
 }
 
@@ -106,9 +98,9 @@ void UInteractableComponent::OnSphereEndOverlap(
 		return;
 	}
 
-	if (OtherActor->IsA<APawn>())
+	if (AActionGameCharacter* Character = Cast<AActionGameCharacter>(OtherActor))
 	{
-		InteractorsInRange.Remove(OtherActor);
+		Character->AddInteractActorInRange(GetOwner());
 	}
 }
 

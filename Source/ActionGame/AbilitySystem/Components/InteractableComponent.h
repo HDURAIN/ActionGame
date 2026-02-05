@@ -17,19 +17,12 @@ public:
 	// Sets default values for this component's properties
 	UInteractableComponent();
 
-	bool IsInteractorInRange(AActor* Interactor) const;
-
-	const TSet<TWeakObjectPtr<AActor>>& GetInteractorsInRange() const;
-
 protected:
 	virtual void BeginPlay() override;
 
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interact")
 	TObjectPtr<USphereComponent> InteractSphere;
-
-	UPROPERTY()
-	TSet<TWeakObjectPtr<AActor>> InteractorsInRange;
 
 protected:
 	UFUNCTION()

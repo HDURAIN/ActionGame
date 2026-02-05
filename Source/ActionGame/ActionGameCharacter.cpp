@@ -298,6 +298,21 @@ void AActionGameCharacter::UnbindASCAttributeDelegates()
 	}
 }
 
+void AActionGameCharacter::AddInteractActorInRange(AActor* Actor)
+{
+	InteractActors.Add(Actor);
+}
+
+void AActionGameCharacter::RemoveInteractActorInRange(AActor* Actor)
+{
+	InteractActors.Add(Actor);
+}
+
+bool AActionGameCharacter::IsInteractActorInRange(AActor* Actor)
+{
+	return InteractActors.Contains(Actor);
+}
+
 bool AActionGameCharacter::ApplyGameplayEffectToSelf(TSubclassOf<UGameplayEffect> Effect, FGameplayEffectContextHandle InEffectContext)
 {
 	if (!Effect) return false;

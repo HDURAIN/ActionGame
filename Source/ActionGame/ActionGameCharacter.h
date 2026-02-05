@@ -183,6 +183,7 @@ protected: // Data Assets
 	FCharacterData CharacterData;
 
 	// 客户端调用
+	// 跟OnRep_Playerstate有什么区别？
 	UFUNCTION()
 	void OnRep_CharacterData();
 
@@ -197,6 +198,7 @@ protected: // Data Assets
 
 protected:	// Gameplay Events
 
+	// 好像可以删除？
 	UPROPERTY(EditDefaultsOnly)
 	FGameplayTag JumpEventTag;
 
@@ -208,9 +210,11 @@ protected:	// Gameplay Tags
 protected: // Item
 	TObjectPtr<UItemContainerComponent> ItemContainerComponent;
 
+	// 好像可以删除？
 	UPROPERTY(EditDefaultsOnly, Category="Test")
 	TObjectPtr<UDA_Item> TestStartupItem_SpeedUp;
 
+	// 好像可以删除？
 	UPROPERTY(EditDefaultsOnly, Category="Test")
 	TObjectPtr<UDA_Item> TestStartupItem_MoreJump;
 
@@ -222,5 +226,13 @@ public: // Attribute
 	void BindASCAttributeDelegates();
 
 	void UnbindASCAttributeDelegates();
+
+protected:
+	TSet<TWeakObjectPtr<AActor>> InteractActors;
+
+public:
+	void AddInteractActorInRange(AActor* Actor);
+	void RemoveInteractActorInRange(AActor* Actor);
+	bool IsInteractActorInRange(AActor* Actor);
 };
 

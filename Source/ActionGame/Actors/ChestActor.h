@@ -54,7 +54,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
 	TObjectPtr<UStaticMeshComponent> MeshComponent;
 
-	// 判断角色是否进入交互区域成为候选
+	// 当角色进入互动范围时 给角色传递指针
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interact")
 	TObjectPtr<UInteractableComponent> InteractableComponent;
 

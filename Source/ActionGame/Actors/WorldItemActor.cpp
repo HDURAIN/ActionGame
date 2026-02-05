@@ -66,7 +66,7 @@ bool AWorldItemActor::CanInteract_Implementation(AActor* Interactor) const
 		return false;
 	}
 
-	if (!InteractableComponent || !InteractableComponent->IsInteractorInRange(Interactor))
+	if (!InteractableComponent)
 	{
 		return false;
 	}
