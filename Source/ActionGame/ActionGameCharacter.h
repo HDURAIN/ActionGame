@@ -25,6 +25,7 @@ class UInputMappingContext;
 class UInputAction;
 class UItemContainerComponent;
 class UDA_Item;
+class UInteractCandidateComponent;
 struct FInputActionValue;
 
 
@@ -228,11 +229,7 @@ public: // Attribute
 	void UnbindASCAttributeDelegates();
 
 protected:
-	TSet<TWeakObjectPtr<AActor>> InteractActors;
-
-public:
-	void AddInteractActorInRange(AActor* Actor);
-	void RemoveInteractActorInRange(AActor* Actor);
-	bool IsInteractActorInRange(AActor* Actor);
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interact")
+	TObjectPtr<UInteractCandidateComponent> InteractCandidateComponent;
 };
 

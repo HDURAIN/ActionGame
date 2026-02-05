@@ -3,6 +3,7 @@
 
 #include "AbilitySystem/Components/InteractableComponent.h"
 #include "Components/SphereComponent.h"
+#include "ActorComponents/InteractCandidateComponent.h"
 
 #include "ActionGameCharacter.h"
 
@@ -61,9 +62,10 @@ void UInteractableComponent::BeginPlay()
 	{
 		// 给一开始就在范围内的character传递本物体的指针
 		// 待添加代码 ++++++++++++++++++++++++++++++
-		if (AActionGameCharacter* Character = Cast<AActionGameCharacter>(Actor))
+		if (UInteractCandidateComponent* CandidateComp =
+			Actor->FindComponentByClass<UInteractCandidateComponent>())
 		{
-			Character->AddInteractActorInRange(Owner);
+			CandidateComp->AddCandidate(GetOwner());
 		}
 	}
 }
@@ -81,9 +83,10 @@ void UInteractableComponent::OnSphereBeginOverlap(
 		return;
 	}
 
-	if (AActionGameCharacter* Character = Cast<AActionGameCharacter>(OtherActor))
+	if (UInteractCandidateComponent* CandidateComp =
+		OtherActor->FindComponentByClass<UInteractCandidateComponent>())
 	{
-		Character->AddInteractActorInRange(GetOwner());
+		CandidateComp->AddCandidate(GetOwner());
 	}
 }
 
@@ -98,9 +101,10 @@ void UInteractableComponent::OnSphereEndOverlap(
 		return;
 	}
 
-	if (AActionGameCharacter* Character = Cast<AActionGameCharacter>(OtherActor))
+	if (UInteractCandidateComponent* CandidateComp =
+		OtherActor->FindComponentByClass<UInteractCandidateComponent>())
 	{
-		Character->AddInteractActorInRange(GetOwner());
+		CandidateComp->RemoveCandidate(GetOwner());
 	}
 }
 

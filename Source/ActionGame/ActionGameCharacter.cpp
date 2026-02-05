@@ -22,6 +22,7 @@
 #include "DataAssets/DA_Item.h"
 
 #include "ActorComponents/AG_CharacterMovementComponent.h"
+#include "ActorComponents/InteractCandidateComponent.h"
 #include "ActorComponents/FootstepsComponent.h"
 #include "DataAssets/CharacterDataAsset.h"
 #include "DataAssets/CharacterAnimDataAsset.h"
@@ -80,7 +81,9 @@ AActionGameCharacter::AActionGameCharacter(const FObjectInitializer& ObjectIniti
 
 	FootstepsComponent = CreateDefaultSubobject<UFootstepsComponent>(TEXT("FootstepsComponent"));
 
-	ItemContainerComponent =CreateDefaultSubobject<UItemContainerComponent>(TEXT("ItemContainerComponent"));
+	ItemContainerComponent = CreateDefaultSubobject<UItemContainerComponent>(TEXT("ItemContainerComponent"));
+
+	InteractCandidateComponent = CreateDefaultSubobject<UInteractCandidateComponent>(TEXT("InteractCandidateComponent"));
 }
 
 void AActionGameCharacter::BeginPlay()
@@ -296,21 +299,6 @@ void AActionGameCharacter::UnbindASCAttributeDelegates()
 
 		MaxJumpCountChangedHandle.Reset();
 	}
-}
-
-void AActionGameCharacter::AddInteractActorInRange(AActor* Actor)
-{
-	InteractActors.Add(Actor);
-}
-
-void AActionGameCharacter::RemoveInteractActorInRange(AActor* Actor)
-{
-	InteractActors.Add(Actor);
-}
-
-bool AActionGameCharacter::IsInteractActorInRange(AActor* Actor)
-{
-	return InteractActors.Contains(Actor);
 }
 
 bool AActionGameCharacter::ApplyGameplayEffectToSelf(TSubclassOf<UGameplayEffect> Effect, FGameplayEffectContextHandle InEffectContext)

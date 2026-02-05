@@ -6,6 +6,7 @@
 #include "Interfaces/Interactable.h"
 
 #include "ActionGameCharacter.h"
+#include "ActorComponents/InteractCandidateComponent.h"
 
 #include "Camera/CameraComponent.h"
 #include "GameFramework/Actor.h"
@@ -177,16 +178,13 @@ void UGA_Interact::TryInteractWithTarget(const FGameplayAbilityActorInfo* ActorI
 
 	const bool bCanInteract = IInteractable::Execute_CanInteract(TargetActor, Interactor);
 
-	AActionGameCharacter* Character = Cast<AActionGameCharacter>(Interactor);
-	if (!Character)
+	if (UInteractCandidateComponent* CandidateComp = Interactor->FindComponentByClass<UInteractCandidateComponent>())
 	{
-		return;
-	}
-
-	// 是否仍在交互候选集合中
-	if (!Character->IsInteractActorInRange(TargetActor))
-	{
-		return;
+		// 是否仍在交互候选集合中
+		if (!CandidateComp->IsInteractCandidate(TargetActor))
+		{
+			return;
+		}
 	}
 
 	if (!bCanInteract)
