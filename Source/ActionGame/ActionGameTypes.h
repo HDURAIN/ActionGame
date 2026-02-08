@@ -38,6 +38,18 @@ struct FCharacterAnimationData
 	class UAnimSequenceBase* CrouchIdleAnimationAsset = nullptr;
 };
 
+USTRUCT(BlueprintType)
+struct FInteractDisplayData
+{
+	GENERATED_USTRUCT_BODY()
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	FText DisplayName;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	int32 Cost = 0;
+};
+
 UENUM(BlueprintType)
 enum class EFoot : uint8
 {	
