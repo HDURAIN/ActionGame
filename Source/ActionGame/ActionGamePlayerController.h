@@ -19,7 +19,6 @@ class AActionGamePlayerController : public APlayerController
 	GENERATED_BODY()
 
 public:
-
 	/** Apply default gameplay input mappings (called by locally controlled Pawn) */
 	UFUNCTION(BlueprintCallable, Category = "Input")
 	void ApplyDefaultMappings();

@@ -60,8 +60,6 @@ void UInteractableComponent::BeginPlay()
 
 	for (AActor* Actor : OverlappingActors)
 	{
-		// 给一开始就在范围内的character传递本物体的指针
-		// 待添加代码 ++++++++++++++++++++++++++++++
 		if (UInteractCandidateComponent* CandidateComp =
 			Actor->FindComponentByClass<UInteractCandidateComponent>())
 		{

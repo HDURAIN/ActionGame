@@ -4,8 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "Delegates/Delegate.h"
 #include "InteractCandidateComponent.generated.h"
 
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnInteractCandidateChanged, AActor* /*Actor*/, bool /*bAdded*/);
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class ACTIONGAME_API UInteractCandidateComponent : public UActorComponent
@@ -22,6 +24,10 @@ public:
 	// === 维护接口（由 Overlap / Scanner 调用） ===
 	void AddCandidate(AActor* Actor);
 	void RemoveCandidate(AActor* Actor);
+
+	FOnInteractCandidateChanged OnInteractCandidateChanged;
+
+	TSet<TWeakObjectPtr<AActor>> GetAllCandidates();
 
 protected:
 	// 当前交互候选集合（弱引用，非拥有）

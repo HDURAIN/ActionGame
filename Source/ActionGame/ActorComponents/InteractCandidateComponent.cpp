@@ -21,6 +21,7 @@ void UInteractCandidateComponent::AddCandidate(AActor* Actor)
 	}
 
 	InteractCandidates.Add(Actor);
+	OnInteractCandidateChanged.Broadcast(Actor, true);
 }
 
 void UInteractCandidateComponent::RemoveCandidate(AActor* Actor)
@@ -31,4 +32,10 @@ void UInteractCandidateComponent::RemoveCandidate(AActor* Actor)
 	}
 
 	InteractCandidates.Remove(Actor);
+	OnInteractCandidateChanged.Broadcast(Actor, false);
+}
+
+TSet<TWeakObjectPtr<AActor>> UInteractCandidateComponent::GetAllCandidates()
+{
+	return InteractCandidates;
 }

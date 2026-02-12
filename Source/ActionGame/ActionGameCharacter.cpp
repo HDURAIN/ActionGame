@@ -28,6 +28,7 @@
 #include "DataAssets/CharacterAnimDataAsset.h"
 #include "Net/UnrealNetwork.h"
 #include "ActionGamePlayerController.h"
+#include <Actors/ChestActor.h>
 
 // 加上自己的移动组件的构造函数
 // const FObjectInitializer& ObjectInitializer - UE 用来集中管理“子对象创建规则”的对象
@@ -89,6 +90,16 @@ AActionGameCharacter::AActionGameCharacter(const FObjectInitializer& ObjectIniti
 void AActionGameCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	InteractCandidateComponent->OnInteractCandidateChanged.AddUObject(this, &AActionGameCharacter::HandleInteractCandidateChanged);
+
+	for (const TWeakObjectPtr<AActor>& WeakActor : InteractCandidateComponent->GetAllCandidates())
+	{
+		if (AActor* Actor = WeakActor.Get())
+		{
+			HandleInteractCandidateChanged(Actor, true);
+		}
+	}
 }
 
 void AActionGameCharacter::PostInitializeComponents()
@@ -298,6 +309,19 @@ void AActionGameCharacter::UnbindASCAttributeDelegates()
 			.Remove(MaxJumpCountChangedHandle);
 
 		MaxJumpCountChangedHandle.Reset();
+	}
+}
+
+void AActionGameCharacter::HandleInteractCandidateChanged(AActor* Actor, bool bAdded)
+{
+	if (!IsLocallyControlled())
+	{
+		return;
+	}
+
+	if (AChestActor* Chest = Cast<AChestActor>(Actor))
+	{
+		Chest->SetInteractUIVisible(bAdded);
 	}
 }
 

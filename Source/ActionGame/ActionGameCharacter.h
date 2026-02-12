@@ -231,5 +231,7 @@ public: // Attribute
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interact")
 	TObjectPtr<UInteractCandidateComponent> InteractCandidateComponent;
+
+	void HandleInteractCandidateChanged(AActor* Actor, bool bAdded);
 };
 

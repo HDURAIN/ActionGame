@@ -16,6 +16,9 @@ class USphereComponent;
 class UBoxComponent;
 class AWorldItemActor;
 class UInteractableComponent;
+class UWorldObjectDataAsset;
+class UWidgetComponent;
+class UUserWidget;
 
 /**
  * AChestActor
@@ -67,6 +70,8 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+	virtual void Tick(float DeltaTime) override;
+
 protected: // Interact
 
 	// 打开宝箱后触发掉落Drop visual actor
@@ -101,9 +106,17 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Drop")
 	TArray<TObjectPtr<UDA_Item>> DropItems;
 
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TObjectPtr<UWorldObjectDataAsset> WorldObjectDataAsset;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")
+	TObjectPtr<UWidgetComponent> InteractWidgetComponent;
+
 	// 宝箱是否已经打开
 	UPROPERTY(VisibleInstanceOnly, ReplicatedUsing = OnRep_Opened, Category = "State")
 	bool bOpened = false;
 
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+	void SetInteractUIVisible(bool bVisible);
 };

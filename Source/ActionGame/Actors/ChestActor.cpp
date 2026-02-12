@@ -10,7 +10,13 @@
 #include "Components/SphereComponent.h"
 #include "Components/BoxComponent.h"
 #include "Components/SceneComponent.h"
+#include "Components/WidgetComponent.h"
 #include "AbilitySystem/Components/InteractableComponent.h"
+#include "UserWidget/WorldObjectPromptWidget.h"
+
+#include "Kismet/KismetMathLibrary.h"
+#include "Camera/PlayerCameraManager.h"
+#include "GameFramework/PlayerController.h"
 
 #include "Net/UnrealNetwork.h"
 
@@ -20,7 +26,7 @@
 AChestActor::AChestActor()
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
 
 	// Root
@@ -49,6 +55,20 @@ AChestActor::AChestActor()
 	InteractTargetBox->ComponentTags.Add(InteractTags::InteractTarget);
 
 	InteractableComponent = CreateDefaultSubobject<UInteractableComponent>(TEXT("InteractableComponent"));
+
+
+	// UI
+	InteractWidgetComponent = CreateDefaultSubobject<UWidgetComponent>(TEXT("InteractWidget"));
+	InteractWidgetComponent->SetupAttachment(RootComponent);
+
+	// 世界空间 UI
+	InteractWidgetComponent->SetWidgetSpace(EWidgetSpace::World);
+	InteractWidgetComponent->SetDrawSize(FVector2D(200.f, 80.f));
+	InteractWidgetComponent->SetRelativeLocation(FVector(0.f, 0.f, 120.f));
+
+	// 默认隐藏
+	InteractWidgetComponent->SetHiddenInGame(true);
+	InteractWidgetComponent->SetVisibility(false);
 }
 
 // Called when the game starts or when spawned
@@ -56,6 +76,41 @@ void AChestActor::BeginPlay()
 {
 	Super::BeginPlay();
 
+	if (!InteractWidgetComponent || !WorldObjectDataAsset)
+	{
+		return;
+	}
+
+	UUserWidget* Widget = InteractWidgetComponent->GetUserWidgetObject();
+	if (!Widget)
+	{
+		return;
+	}
+	UE_LOG(LogTemp, Warning, TEXT("Widget = %s"),
+		Widget ? TEXT("Valid") : TEXT("Null"));
+
+	if (UWorldObjectPromptWidget* Prompt = Cast<UWorldObjectPromptWidget>(Widget))
+	{
+		Prompt->InitWithData(WorldObjectDataAsset);
+	}
+}
+
+void AChestActor::Tick(float DeltaTime)
+{
+	if (!InteractWidgetComponent || !InteractWidgetComponent->IsVisible())
+		return;
+
+	APlayerController* PC = GetWorld()->GetFirstPlayerController();
+	if (!PC) return;
+
+	FVector CamLoc = PC->PlayerCameraManager->GetCameraLocation();
+	FVector WidgetLoc = InteractWidgetComponent->GetComponentLocation();
+
+	FRotator LookAt = UKismetMathLibrary::FindLookAtRotation(WidgetLoc, CamLoc);
+	LookAt.Pitch = 0.f;
+	LookAt.Roll = 0.f;
+
+	InteractWidgetComponent->SetWorldRotation(LookAt);
 }
 
 bool AChestActor::CanInteract_Implementation(AActor* Interactor) const
@@ -86,6 +141,8 @@ void AChestActor::ExecuteInteract_Implementation(AActor* Interactor)
 	}
 
 	bOpened = true;
+
+	SetInteractUIVisible(false);
 
 	StartDropFlow();
 
@@ -173,6 +230,8 @@ void AChestActor::HandleDropLanded(const FVector& GroundLocation)
 void AChestActor::OnRep_Opened()
 {
 	OnChestOpened();
+
+	SetInteractUIVisible(false);
 }
 
 void AChestActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -180,4 +239,23 @@ void AChestActor::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifet
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(AChestActor, bOpened);
+}
+
+void AChestActor::SetInteractUIVisible(bool bVisible)
+{
+	if (!InteractWidgetComponent)
+	{
+		return;
+	}
+
+	if (bOpened) bVisible = false;
+
+	// UI 只在客户端可见
+	if (!GetWorld() || GetWorld()->IsNetMode(NM_DedicatedServer))
+	{
+		return;
+	}
+
+	InteractWidgetComponent->SetHiddenInGame(!bVisible);
+	InteractWidgetComponent->SetVisibility(bVisible);
 }

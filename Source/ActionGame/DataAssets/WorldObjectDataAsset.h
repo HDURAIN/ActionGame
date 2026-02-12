@@ -11,13 +11,13 @@
 /**
  * 
  */
-UCLASS()
+UCLASS(BlueprintType, Blueprintable)
 class ACTIONGAME_API UWorldObjectDataAsset : public UDataAsset
 {
 	GENERATED_BODY()
 	
 public:
 
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	FInteractDisplayData InteractDisplayData;
 };
