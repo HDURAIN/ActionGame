@@ -19,5 +19,5 @@ class ACTIONGAME_API UWorldObjectDataAsset : public UDataAsset
 public:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	FInteractDisplayData InteractDisplayData;
+	FInteractDisplayData WorldObjectData;
 };

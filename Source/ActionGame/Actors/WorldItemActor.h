@@ -27,6 +27,7 @@ public:
 	virtual bool CanInteract_Implementation(AActor* Interactor) const override;
 	virtual void ExecuteInteract_Implementation(AActor* Interactor) override;
 	virtual EInteractType GetInteractType_Implementation() const override;
+	virtual float GetInteractCost_Implementation() const override;
 
 	UFUNCTION(BlueprintCallable, Category = "Item")
 	UDA_Item* GetItemDef() const { return ItemDef; }

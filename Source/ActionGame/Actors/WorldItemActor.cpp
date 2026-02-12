@@ -101,6 +101,11 @@ EInteractType AWorldItemActor::GetInteractType_Implementation() const
 	return InteractType;
 }
 
+float AWorldItemActor::GetInteractCost_Implementation() const
+{
+	return 0.0f;
+}
+
 bool AWorldItemActor::GiveItemTo(AActor* Interactor)
 {
 	if (!ItemDef || !Interactor)

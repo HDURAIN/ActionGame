@@ -17,6 +17,7 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Camera/PlayerCameraManager.h"
 #include "GameFramework/PlayerController.h"
+#include "DataAssets/WorldObjectDataAsset.h"
 
 #include "Net/UnrealNetwork.h"
 
@@ -155,6 +156,11 @@ void AChestActor::ExecuteInteract_Implementation(AActor* Interactor)
 EInteractType AChestActor::GetInteractType_Implementation() const
 {
 	return InteractType;
+}
+
+float AChestActor::GetInteractCost_Implementation() const
+{
+	return WorldObjectDataAsset->WorldObjectData.Cost;
 }
 
 void AChestActor::StartDropFlow()

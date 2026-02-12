@@ -11,22 +11,16 @@ void UAG_AttributeSetBase::PostGameplayEffectExecute(const FGameplayEffectModCal
 {
 	Super::PostGameplayEffectExecute(Data);
 
-	if (Data.EvaluatedData.Attribute == GetHealthAttribute())
+	const FGameplayAttribute& Attribute = Data.EvaluatedData.Attribute;
+
+	if (Attribute == GetHealthAttribute())
 	{
 		SetHealth(FMath::Clamp(GetHealth(), 0.f, GetMaxHealth()));
 	}
-	/*else if (Data.EvaluatedData.Attribute == GetBaseMoveSpeedAttribute())
+	else if (Attribute == GetGoldAttribute())
 	{
-		ACharacter* OwningCharacter = Cast<ACharacter>(GetOwningActor());
-		UCharacterMovementComponent* CharacterMovement = OwningCharacter ? OwningCharacter->GetCharacterMovement() : nullptr;
-
-		if (CharacterMovement)
-		{
-			const float MaxSpeed = GetBaseMoveSpeed();
-
-			CharacterMovement->MaxWalkSpeed = MaxSpeed;
-		}
-	}*/
+		SetGold(FMath::Max(0.f, GetGold()));
+	}
 }
 
 void UAG_AttributeSetBase::OnRep_Health(const FGameplayAttributeData& OldHealth)
@@ -65,6 +59,11 @@ void UAG_AttributeSetBase::OnRep_MaxJumpCount(const FGameplayAttributeData& OldM
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UAG_AttributeSetBase, MaxJumpCount, OldMaxJumpCount);
 }
 
+void UAG_AttributeSetBase::OnRep_Gold(const FGameplayAttributeData& OldGold)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UAG_AttributeSetBase, Gold, OldGold);
+}
+
 void UAG_AttributeSetBase::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -78,4 +77,5 @@ void UAG_AttributeSetBase::GetLifetimeReplicatedProps(TArray<class FLifetimeProp
 	DOREPLIFETIME_CONDITION_NOTIFY(UAG_AttributeSetBase, BaseMoveSpeed, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UAG_AttributeSetBase, MoveSpeedMultiplier, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UAG_AttributeSetBase, MaxJumpCount, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UAG_AttributeSetBase, Gold, COND_None, REPNOTIFY_Always);
 }

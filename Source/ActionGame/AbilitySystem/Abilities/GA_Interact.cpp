@@ -8,6 +8,8 @@
 #include "ActionGameCharacter.h"
 #include "ActorComponents/InteractCandidateComponent.h"
 
+#include "AbilitySystem/AttributeSets/AG_AttributeSetBase.h"
+
 #include "Camera/CameraComponent.h"
 #include "GameFramework/Actor.h"
 #include "GameFramework/Character.h"
@@ -34,6 +36,10 @@ void UGA_Interact::ActivateAbility(const FGameplayAbilitySpecHandle Handle, cons
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
 	}
+	
+	// 必须先调用 Super
+	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+	UE_LOG(LogTemp, Warning, TEXT("Call [ActivateAbility]"));
 
 	// ServerOnly 客户端触发时 GAS会自动转发到服务器执行
 	if (!HasAuthority(&ActivationInfo))
@@ -41,18 +47,97 @@ void UGA_Interact::ActivateAbility(const FGameplayAbilitySpecHandle Handle, cons
 		return;
 	}
 
-	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
-
-	UE_LOG(LogTemp, Warning, TEXT("Call [ActivateAbility]"));
-
 	// 服务器端选择并校验交互目标（权威判定）
 	AActor* TargetActor = FindBestInteractableTarget(ActorInfo);
-	if (TargetActor)
+	if (!TargetActor)
 	{
-		TryInteractWithTarget(ActorInfo, TargetActor);
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+		return;
 	}
 
+	// 提交Ability，消耗资源
+	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("CommitAbility failed (cost or cooldown)"));
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+
+	TryInteractWithTarget(ActorInfo, TargetActor);
+
 	EndAbility(Handle, ActorInfo, ActivationInfo, false, false);
+}
+
+void UGA_Interact::ApplyCost(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) const
+{
+	if (!ActorInfo || !ActorInfo->AvatarActor.IsValid())
+		return;
+
+	AActor* TargetActor = FindBestInteractableTarget(ActorInfo);
+	if (!TargetActor)
+		return;
+
+	// 从接口读取 cost
+	float Cost = 0.f;
+	if (TargetActor->Implements<UInteractable>())
+	{
+		Cost = IInteractable::Execute_GetInteractCost(TargetActor);
+	}
+
+	// 创建 GE Spec
+	FGameplayEffectSpecHandle SpecHandle =
+		MakeOutgoingGameplayEffectSpec(CostGameplayEffectClass, GetAbilityLevel());
+
+	if (SpecHandle.IsValid())
+	{
+		// 写入 SetByCaller（注意负号）
+		SpecHandle.Data->SetSetByCallerMagnitude(
+			FGameplayTag::RequestGameplayTag("Data.Cost.Gold"),
+			-Cost
+		);
+
+		// 应用 GE
+		ApplyGameplayEffectSpecToOwner(
+			Handle,
+			ActorInfo,
+			ActivationInfo,
+			SpecHandle
+		);
+	}
+}
+
+bool UGA_Interact::CheckCost(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, OUT FGameplayTagContainer* OptionalRelevantTags) const
+{
+	if (!ActorInfo || !ActorInfo->AvatarActor.IsValid())
+		return false;
+
+	// 找目标
+	AActor* TargetActor = FindBestInteractableTarget(ActorInfo);
+	if (!TargetActor)
+		return false;
+
+	// 读取交互 cost
+	float Cost = 0.f;
+	if (TargetActor->Implements<UInteractable>())
+	{
+		Cost = IInteractable::Execute_GetInteractCost(TargetActor);
+	}
+
+	// 读取当前 Gold
+	const UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get();
+	if (!ASC)
+		return false;
+
+	float CurrentGold =
+		ASC->GetNumericAttribute(UAG_AttributeSetBase::GetGoldAttribute());
+
+	if (CurrentGold < Cost)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("Not enough gold. Need %.1f have %.1f"), Cost, CurrentGold);
+		return false;
+	}
+
+	return true;
 }
 
 

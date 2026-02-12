@@ -51,6 +51,10 @@ public:
 	FGameplayAttributeData MaxJumpCount;
 	ATTRIBUTE_ACCESSORS(UAG_AttributeSetBase, MaxJumpCount)
 
+	UPROPERTY(BlueprintReadOnly, Category = "Money", ReplicatedUsing = OnRep_Gold)
+	FGameplayAttributeData Gold;
+	ATTRIBUTE_ACCESSORS(UAG_AttributeSetBase, Gold)
+
 protected:
 	// 修改Attribute后的纠错函数
 	virtual void PostGameplayEffectExecute(const struct FGameplayEffectModCallbackData& Data) override;
@@ -79,4 +83,7 @@ protected:
 
 	UFUNCTION()
 	virtual void OnRep_MaxJumpCount(const FGameplayAttributeData& OldMaxJumpCount);
+
+	UFUNCTION()
+	virtual void OnRep_Gold(const FGameplayAttributeData& OldGold);
 };

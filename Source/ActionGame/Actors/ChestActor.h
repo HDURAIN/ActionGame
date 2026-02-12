@@ -48,6 +48,7 @@ public:
 	virtual bool CanInteract_Implementation(AActor* Interactor) const override;
 	virtual void ExecuteInteract_Implementation(AActor* Interactor) override;
 	virtual EInteractType GetInteractType_Implementation() const override;
+	virtual float GetInteractCost_Implementation() const override;
 
 protected:
 	// Components
@@ -106,7 +107,7 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Drop")
 	TArray<TObjectPtr<UDA_Item>> DropItems;
 
-	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	UPROPERTY(EditDefaultsOnly, Category = "Data")
 	TObjectPtr<UWorldObjectDataAsset> WorldObjectDataAsset;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "UI")

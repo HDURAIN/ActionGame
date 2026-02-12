@@ -29,6 +29,18 @@ public:
 		const FGameplayEventData* TriggerEventData
 	) override;
 
+	virtual void ApplyCost(
+		const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo
+	) const override;
+
+	virtual bool CheckCost(
+		const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		OUT FGameplayTagContainer* OptionalRelevantTags
+	) const override;
+
 protected:
 	
 	// Ä¿±êÑ¡Ôñ
