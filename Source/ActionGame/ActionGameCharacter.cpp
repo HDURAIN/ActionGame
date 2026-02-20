@@ -151,6 +151,12 @@ void AActionGameCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInpu
 
 		// Interacting
 		EnhancedInputComponent->BindAction(InteractAction, ETriggerEvent::Started, this, &AActionGameCharacter::DoInteract);
+
+		// Skills
+		EnhancedInputComponent->BindAction(Skill_1_Action, ETriggerEvent::Started, this, &ThisClass::Input_Skill_1);
+		EnhancedInputComponent->BindAction(Skill_2_Action, ETriggerEvent::Started, this, &ThisClass::Input_Skill_2);
+		EnhancedInputComponent->BindAction(Skill_3_Action, ETriggerEvent::Started, this, &ThisClass::Input_Skill_3);
+		EnhancedInputComponent->BindAction(Skill_4_Action, ETriggerEvent::Started, this, &ThisClass::Input_Skill_4);
 	}
 	else
 	{
@@ -262,7 +268,6 @@ void AActionGameCharacter::DoSprintCancel()
 
 void AActionGameCharacter::DoInteract()
 {
-	UE_LOG(LogTemp, Warning, TEXT("DoInteract"));
 	if (!AbilitySystemComponent) return;
 	FGameplayTagContainer TempTags;
 	TempTags.AddTag(InteractAbilityTag);
@@ -325,6 +330,50 @@ void AActionGameCharacter::HandleInteractCandidateChanged(AActor* Actor, bool bA
 	}
 }
 
+void AActionGameCharacter::Input_Skill_1()
+{
+	AbilitySystemComponent->AbilityLocalInputPressed((int32)EAbilityInputID::Skill1);
+}
+
+void AActionGameCharacter::Input_Skill_2()
+{
+	AbilitySystemComponent->AbilityLocalInputPressed((int32)EAbilityInputID::Skill2);
+}
+
+void AActionGameCharacter::Input_Skill_3()
+{
+	AbilitySystemComponent->AbilityLocalInputPressed((int32)EAbilityInputID::Skill3);
+}
+
+void AActionGameCharacter::Input_Skill_4()
+{
+	AbilitySystemComponent->AbilityLocalInputPressed((int32)EAbilityInputID::Skill4);
+}
+
+void AActionGameCharacter::GrantSkillAbilities()
+{
+	if (!HasAuthority()) return;
+	if (!AbilitySystemComponent) return;
+
+	const int32 MaxSlots = (int32)EAbilityInputID::Skill4;
+
+	for (int32 i = 0; i < DefaultSkillAbilities.Num(); i++)
+	{
+		if (!DefaultSkillAbilities[i]) continue;
+
+		if (i >= MaxSlots)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("Too many skills assigned, ignoring index %d"), i);
+			break;
+		}
+
+		FGameplayAbilitySpec Spec(DefaultSkillAbilities[i], 1);
+		Spec.InputID = i + 1; // Skill1 = 1
+
+		AbilitySystemComponent->GiveAbility(Spec);
+	}
+}
+
 bool AActionGameCharacter::ApplyGameplayEffectToSelf(TSubclassOf<UGameplayEffect> Effect, FGameplayEffectContextHandle InEffectContext)
 {
 	if (!Effect) return false;
@@ -379,6 +428,8 @@ void AActionGameCharacter::PossessedBy(AController* NewController)
 
 	GiveAbilities();
 	ApplyStartupEffects();
+
+	GrantSkillAbilities();
 
 	BindASCAttributeDelegates();
 }

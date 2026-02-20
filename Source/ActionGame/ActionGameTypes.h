@@ -66,6 +66,24 @@ enum class EInteractType : uint8
 	None UMETA(DisplayName = "None")
 };
 
+UENUM(BlueprintType)
+enum class EAbilityInputID : uint8
+{
+	None   UMETA(DisplayName = "None"),
+	Skill1 UMETA(DisplayName = "Skill1"),
+	Skill2 UMETA(DisplayName = "Skill2"),
+	Skill3 UMETA(DisplayName = "Skill3"),
+	Skill4 UMETA(DisplayName = "Skill4")
+};
+
+UENUM(BlueprintType)
+enum class EAbilityType : uint8
+{
+	Active,
+	Passive,
+	Toggle
+};
+
 namespace InteractTags
 {
 	static const FName InteractTarget(TEXT("InteractTarget"));

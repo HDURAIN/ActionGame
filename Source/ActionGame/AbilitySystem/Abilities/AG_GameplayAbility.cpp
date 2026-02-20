@@ -1,113 +1,132 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "AbilitySystem/Abilities/AG_GameplayAbility.h"
 #include "ActionGameCharacter.h"
 #include "AbilitySystemComponent.h"
 #include <AbilitySystemLog.h>
 
-
-
-
-/*
-*	Handle :					这次Ability激活的唯一ID
-*	ActorInfo:					Ability运行所需的一切上下文
-*	ActivationInfo:				网络/预测相关信息
-*	TriggerEventData:			如果是GameplayEvent触发，会有payload在其中
-*/
 void UAG_GameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
-	/*
-	*	调用父类
-	*	1、注册Ability为Active 2、初始化内部状态 3、处理预测/复制bookkeeping
-	*/
-	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
-
-	// 记录是谁施加的Effect 记录 来源对象 / HitResult / Instigator
-	// * 从ActorInfo拿 *
-	FGameplayEffectContextHandle EffectContext = ActorInfo->AbilitySystemComponent->MakeEffectContext();
-
-	// Ability 激活时施加，但不需要在 EndAbility 时清理
-	for (auto GameplayEffect : OngoingEffectsToJustApplyOnstart)
+	if (!ActorInfo || !ActorInfo->AvatarActor.IsValid())
 	{
-		if (!GameplayEffect.Get()) continue;
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
 
-		// 获取ASC
-		if (UAbilitySystemComponent* AbilityComponent = ActorInfo->AbilitySystemComponent.Get())
-		{	
-			// 应用Effect的标准流程
-			// SpecHandle = GameplayEffect 的“可执行规格说明书”
-			FGameplayEffectSpecHandle SpecHandle = AbilityComponent->MakeOutgoingSpec(GameplayEffect, 1, EffectContext);
-			if (SpecHandle.IsValid())
-			{	
-				// ActiveGEHandle = 已经成功应用到 ASC 上的 Effect 实例的唯一 ID
-				FActiveGameplayEffectHandle ActiveGEHandle = AbilityComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
-				if (!ActiveGEHandle.WasSuccessfullyApplied())
-				{
-					ABILITY_LOG(Log, TEXT("Ability %s failed to apply startup effect %s"), *GetName(), *GetNameSafe(GameplayEffect));
-				}
+	if (!CommitAbilityChecked())
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+
+	// ===== 自动Apply Start Effects =====
+	if (UAbilitySystemComponent* ASC = GetASC())
+	{
+		for (auto EffectClass : EffectsOnStart)
+		{
+			if (!EffectClass) continue;
+
+			// 创建Context
+			FGameplayEffectContextHandle ContextHandle = ASC->MakeEffectContext();
+			ContextHandle.AddSourceObject(this);
+			// 创建Spec
+			FGameplayEffectSpecHandle Spec = ASC->MakeOutgoingSpec(EffectClass, GetAbilityLevel(), ContextHandle);
+
+			if (Spec.IsValid())
+			{
+				// 应用到角色身上
+				FActiveGameplayEffectHandle Handle =
+					ASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+
+				// 记录句柄，技能结束时自动移除
+				ActiveEffectHandles.Add(Handle);
 			}
 		}
 	}
 
-	// Ability实例化才允许存成员变量状态
-	// 否则所有角色公用一个Ability对象
-	// 存Handle会互相覆盖
-	if (IsInstantiated())
+	// ===== 子类逻辑 =====
+	if (HasAuthority(&CurrentActivationInfo))
 	{
-		for (auto GameplayEffect : OngoingEffectsToRemoveOnEnd)
-		{
-			if (!GameplayEffect.Get()) continue;
+		OnAbilityActivated();
+	}
 
-			if (UAbilitySystemComponent* AbilityComponent = ActorInfo->AbilitySystemComponent.Get())
-			{
-				FGameplayEffectSpecHandle SpecHandle = AbilityComponent->MakeOutgoingSpec(GameplayEffect, 1, EffectContext);
-				if (SpecHandle.IsValid())
-				{
-					FActiveGameplayEffectHandle ActiveGEHandle = AbilityComponent->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
-					if (!ActiveGEHandle.WasSuccessfullyApplied())
-					{
-						ABILITY_LOG(Log, TEXT("Ability %s failed to apply runtime effect %s"), *GetName(), *GetNameSafe(GameplayEffect));
-					}
-					else
-					{
-						// 存Handle
-						// 通常意味着：这个 Effect 的生命周期 = Ability 生命周期
-						RemoveOnEndEffectHandles.Add(ActiveGEHandle);
-					}
-				}
-			}
-		}
+	// ===== 蓝图表现 =====
+	K2_OnAbilityActivated();
+
+	// ===== 自动结束 =====
+	if (bAutoEndAbility)
+	{
+		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 	}
 }
 
-// 生命周期结束钩子
 void UAG_GameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
-	if (IsInstantiated())
+	// ===== Remove Start Effects =====
+	if (UAbilitySystemComponent* ASC = GetASC())
 	{
-		for (FActiveGameplayEffectHandle ActiveEffectHandle : RemoveOnEndEffectHandles)
+		for (auto& EffectHandle : ActiveEffectHandles)
 		{
-			if (ActiveEffectHandle.IsValid())
-			{
-				// 清理生命周期与Ability绑定的Effect
-				ActorInfo->AbilitySystemComponent->RemoveActiveGameplayEffect(ActiveEffectHandle);
-			}
+			ASC->RemoveActiveGameplayEffect(EffectHandle);
 		}
-
-		// 清空数组
-		// 避免下一次激活残留状态
-		RemoveOnEndEffectHandles.Empty();
 	}
 
-	/*
-	* 1、正式标记 Ability 为 Ended 2、通知客户端 / 服务器 3、释放预测 Key
-	*/
+	ActiveEffectHandles.Empty();
+
+	if (UAbilitySystemComponent* ASC = GetASC())
+	{
+		for (auto EffectClass : EffectsOnEnd)
+		{
+			if (!EffectClass) continue;
+
+			FGameplayEffectContextHandle ContextHandle = ASC->MakeEffectContext();
+			ContextHandle.AddSourceObject(this);
+
+			FGameplayEffectSpecHandle Spec = ASC->MakeOutgoingSpec(EffectClass, GetAbilityLevel(), ContextHandle);
+
+			if (Spec.IsValid())
+			{
+				ASC->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+			}
+		}
+	}
+
+	// ===== 子类结束逻辑 =====
+	if (HasAuthority(&CurrentActivationInfo))
+	{
+		OnAbilityEnded(bWasCancelled);
+	}
+
+	// ===== 蓝图表现 =====
+	K2_OnAbilityEnded(bWasCancelled);
+
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 
-// 纯Helper 减少 Cast 重复代码
-AActionGameCharacter* UAG_GameplayAbility::GetActionGameCharacterFromActorInfo() const
+void UAG_GameplayAbility::OnAbilityActivated()
+{
+}
+
+void UAG_GameplayAbility::OnAbilityEnded(bool bWasCancelled)
+{
+}
+
+AActionGameCharacter* UAG_GameplayAbility::GetCharacter() const
 {
 	return Cast<AActionGameCharacter>(GetAvatarActorFromActorInfo());
+}
+
+UAbilitySystemComponent* UAG_GameplayAbility::GetASC() const
+{
+	return GetAbilitySystemComponentFromActorInfo();
+}
+
+bool UAG_GameplayAbility::CommitAbilityChecked()
+{
+	if (!CommitAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo))
+	{
+		UE_LOG(LogAbilitySystem, Warning, TEXT("[%s] CommitAbility FAILED"), *GetName());
+		return false;
+	}
+	return true;
 }
