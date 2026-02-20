@@ -7,6 +7,7 @@
 #include "ActionGamePlayerController.generated.h"
 
 class UInputMappingContext;
+class UPlayerHUDWidget;
 
 /**
  * PlayerController
@@ -23,9 +24,22 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Input")
 	void ApplyDefaultMappings();
 
+	virtual void BeginPlay() override;
+	virtual void OnPossess(APawn* InPawn) override;
+
 protected:
 
 	/** Default gameplay input mappings */
 	UPROPERTY(EditDefaultsOnly, Category = "Input|Mapping")
 	TArray<TObjectPtr<UInputMappingContext>> DefaultMappingContexts;
+
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<UPlayerHUDWidget> HUDWidgetClass;
+
+private:
+
+	UPROPERTY()
+	UPlayerHUDWidget* HUDWidget;
+
+	void InitHUDWithPawn(APawn* InPawn);
 };
