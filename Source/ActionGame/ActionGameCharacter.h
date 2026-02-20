@@ -82,6 +82,18 @@ protected: // Input
 	UPROPERTY(EditAnywhere, Category = "Input")
 	UInputAction* InteractAction;
 
+	UPROPERTY(EditAnywhere, Category = "Input")
+	UInputAction* Skill_1_Action;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	UInputAction* Skill_2_Action;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	UInputAction* Skill_3_Action;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	UInputAction* Skill_4_Action;
+
 protected: // Input
 
 	/** Initialize input action bindings */
@@ -119,6 +131,12 @@ public: // Input
 
 	UFUNCTION(BlueprintCallable, Category = "Input")
 	virtual void DoInteract();
+
+	void Input_Skill_1();
+	void Input_Skill_2();
+	void Input_Skill_3();
+	void Input_Skill_4();
+	void GrantSkillAbilities();
 
 public: // Camera
 
@@ -233,27 +251,5 @@ protected:
 	TObjectPtr<UInteractCandidateComponent> InteractCandidateComponent;
 
 	void HandleInteractCandidateChanged(AActor* Actor, bool bAdded);
-
-public:
-	UPROPERTY(EditAnywhere, Category = "Input")
-	UInputAction* Skill_1_Action;
-
-	UPROPERTY(EditAnywhere, Category = "Input")
-	UInputAction* Skill_2_Action;
-
-	UPROPERTY(EditAnywhere, Category = "Input")
-	UInputAction* Skill_3_Action;
-
-	UPROPERTY(EditAnywhere, Category = "Input")
-	UInputAction* Skill_4_Action;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Abilities")
-	TArray<TSubclassOf<UGameplayAbility>> DefaultSkillAbilities;
-
-	void Input_Skill_1();
-	void Input_Skill_2();
-	void Input_Skill_3();
-	void Input_Skill_4();
-	void GrantSkillAbilities();
 };
 

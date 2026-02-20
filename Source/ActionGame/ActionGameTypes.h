@@ -18,6 +18,9 @@ struct FCharacterData
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "AnimDataAsset")
 	class UCharacterAnimDataAsset* CharacterAnimDataAsset;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "AbilitySetDataAsset")
+	class UAbilitySetDataAsset* CharacterSkillDataAsset;
 };
 
 USTRUCT(BlueprintType)
@@ -48,6 +51,15 @@ struct FInteractDisplayData
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	int32 Cost = 0;
+};
+
+USTRUCT(BlueprintType)
+struct FAbilitySetData
+{
+	GENERATED_USTRUCT_BODY()
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	TArray<TSubclassOf<class UGameplayAbility>> Abilities;
 };
 
 UENUM(BlueprintType)

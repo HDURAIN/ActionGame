@@ -26,6 +26,7 @@
 #include "ActorComponents/FootstepsComponent.h"
 #include "DataAssets/CharacterDataAsset.h"
 #include "DataAssets/CharacterAnimDataAsset.h"
+#include "DataAssets/AbilitySetDataAsset.h"
 #include "Net/UnrealNetwork.h"
 #include "ActionGamePlayerController.h"
 #include <Actors/ChestActor.h>
@@ -354,12 +355,15 @@ void AActionGameCharacter::GrantSkillAbilities()
 {
 	if (!HasAuthority()) return;
 	if (!AbilitySystemComponent) return;
+	if (!CharacterData.CharacterSkillDataAsset) return;
+
+	const auto& AbilitySet = CharacterData.CharacterSkillDataAsset->AbilitySetData.Abilities;
 
 	const int32 MaxSlots = (int32)EAbilityInputID::Skill4;
 
-	for (int32 i = 0; i < DefaultSkillAbilities.Num(); i++)
+	for (int32 i = 0; i < AbilitySet.Num(); i++)
 	{
-		if (!DefaultSkillAbilities[i]) continue;
+		if (!AbilitySet[i]) continue;
 
 		if (i >= MaxSlots)
 		{
@@ -367,8 +371,8 @@ void AActionGameCharacter::GrantSkillAbilities()
 			break;
 		}
 
-		FGameplayAbilitySpec Spec(DefaultSkillAbilities[i], 1);
-		Spec.InputID = i + 1; // Skill1 = 1
+		FGameplayAbilitySpec Spec(AbilitySet[i], 1);
+		Spec.InputID = i + 1;
 
 		AbilitySystemComponent->GiveAbility(Spec);
 	}
