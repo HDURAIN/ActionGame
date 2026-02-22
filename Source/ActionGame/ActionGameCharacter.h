@@ -55,6 +55,9 @@ private: // Camera
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta = (AllowPrivateAccess = "true"))
 	UCameraComponent* FollowCamera;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UChildActorComponent> WeaponComponent;
+
 protected: // Input
 
 	/** Jump Input Action */

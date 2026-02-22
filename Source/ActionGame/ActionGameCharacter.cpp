@@ -86,6 +86,9 @@ AActionGameCharacter::AActionGameCharacter(const FObjectInitializer& ObjectIniti
 	ItemContainerComponent = CreateDefaultSubobject<UItemContainerComponent>(TEXT("ItemContainerComponent"));
 
 	InteractCandidateComponent = CreateDefaultSubobject<UInteractCandidateComponent>(TEXT("InteractCandidateComponent"));
+
+	WeaponComponent = CreateDefaultSubobject<UChildActorComponent>(TEXT("Weapon"));
+	WeaponComponent->SetupAttachment(GetMesh(), TEXT("WeaponSocket"));
 }
 
 void AActionGameCharacter::BeginPlay()
