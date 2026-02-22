@@ -321,6 +321,12 @@ void AActionGameCharacter::UnbindASCAttributeDelegates()
 	}
 }
 
+AActor* AActionGameCharacter::GetWeaponActor() const
+{
+	if (!WeaponComponent) return nullptr;
+	return WeaponComponent->GetChildActor();
+}
+
 void AActionGameCharacter::HandleInteractCandidateChanged(AActor* Actor, bool bAdded)
 {
 	if (!IsLocallyControlled())

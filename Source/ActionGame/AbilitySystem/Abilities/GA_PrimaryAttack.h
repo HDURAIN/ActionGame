@@ -19,4 +19,8 @@ class ACTIONGAME_API UGA_PrimaryAttack : public UAG_GameplayAbility
 
 	/** ¼¼ÄÜ½áÊøÂß¼­ */
 	virtual void OnAbilityEnded(bool bWasCancelled) override;
+
+	bool DoCameraTrace(FHitResult& OutHit, FVector& OutAimPoint);
+
+	void DoWeaponTrace(const FVector& AimPoint);
 };

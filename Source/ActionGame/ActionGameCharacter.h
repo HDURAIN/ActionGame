@@ -249,6 +249,9 @@ public: // Attribute
 
 	void UnbindASCAttributeDelegates();
 
+	UFUNCTION(BlueprintCallable)
+	AActor* GetWeaponActor() const;
+
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interact")
 	TObjectPtr<UInteractCandidateComponent> InteractCandidateComponent;
