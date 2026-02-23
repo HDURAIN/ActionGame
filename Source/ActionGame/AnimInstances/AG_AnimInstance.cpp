@@ -113,3 +113,30 @@ UAnimSequenceBase* UAG_AnimInstance::GetCrouchIdleAnimation() const
 		? DefaultCharacterAnimDataAsset->CharacterAnimationData.CrouchIdleAnimationAsset
 		: nullptr;
 }
+
+UBlendSpace* UAG_AnimInstance::GetFireLocomotionBlendspace() const
+{
+	// 编辑器模式下返回默认的 BlendSpace，避免崩溃和空白预览
+	if (GIsEditor && !GIsPlayInEditorWorld)
+	{
+		return IsValid(DefaultCharacterAnimDataAsset)
+			? DefaultCharacterAnimDataAsset->CharacterAnimationData.FireMovementBlendSpace
+			: nullptr;
+	}
+
+	// 游戏运行时逻辑
+	if (AActionGameCharacter* ActionGameCharacter = Cast<AActionGameCharacter>(GetOwningActor()))
+	{
+		FCharacterData CharacterData = ActionGameCharacter->GetCharacterData();
+
+		if (IsValid(CharacterData.CharacterAnimDataAsset))
+		{
+			return CharacterData.CharacterAnimDataAsset->CharacterAnimationData.FireMovementBlendSpace;
+		}
+	}
+
+	// 回退到默认 BlendSpace
+	return IsValid(DefaultCharacterAnimDataAsset)
+		? DefaultCharacterAnimDataAsset->CharacterAnimationData.FireMovementBlendSpace
+		: nullptr;
+}

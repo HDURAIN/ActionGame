@@ -62,18 +62,23 @@ void UAG_GameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handl
 
 void UAG_GameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
 {
-	// ===== Remove Start Effects =====
-	if (UAbilitySystemComponent* ASC = GetASC())
+	UAbilitySystemComponent* ASC = GetASC();
+
+	// ===== Remove Start Effects (Server Only) =====
+	if (ASC && HasAuthority(&ActivationInfo))
 	{
 		for (auto& EffectHandle : ActiveEffectHandles)
 		{
-			ASC->RemoveActiveGameplayEffect(EffectHandle);
+			if (EffectHandle.IsValid())
+			{
+				ASC->RemoveActiveGameplayEffect(EffectHandle);
+			}
 		}
 	}
 
 	ActiveEffectHandles.Empty();
 
-	if (UAbilitySystemComponent* ASC = GetASC())
+	if (ASC)
 	{
 		for (auto EffectClass : EffectsOnEnd)
 		{

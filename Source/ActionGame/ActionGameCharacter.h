@@ -13,18 +13,15 @@
 
 class UAG_AbilitySystemComponentBase;
 class UAG_AttributeSetBase;
-
 class UGameplayEffect;
 class UGameplayAbility;
-
-class USpringArmComponent;
-class UCameraComponent;
-class UFootstepsComponent;
 class UInputAction;
 class UInputMappingContext;
-class UInputAction;
-class UItemContainerComponent;
 class UDA_Item;
+class UCameraComponent;
+class USpringArmComponent;
+class UFootstepsComponent;
+class UItemContainerComponent;
 class UInteractCandidateComponent;
 struct FInputActionValue;
 
@@ -188,6 +185,10 @@ protected: // Ability System
 	UPROPERTY(EditDefaultsOnly, Category = "Abilities|Tags")
 	FGameplayTag InteractAbilityTag;
 
+	// »Øµ÷
+	UFUNCTION()
+	void OnFiringTagChanged(const FGameplayTag Tag, int32 Count);
+
 public: // Data Assets
 	
 	UFUNCTION(BlueprintCallable)
@@ -257,5 +258,12 @@ protected:
 	TObjectPtr<UInteractCandidateComponent> InteractCandidateComponent;
 
 	void HandleInteractCandidateChanged(AActor* Actor, bool bAdded);
+
+protected:
+	bool bFiring = false;
+
+public:
+	UFUNCTION(BlueprintPure)
+	bool IsFiring() const { return bFiring; }
 };
 

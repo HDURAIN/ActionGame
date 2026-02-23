@@ -4,8 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "AbilitySystem/Abilities/AG_GameplayAbility.h"
+#include "GameplayEffectTypes.h"
 #include "GA_PrimaryAttack.generated.h"
 
+class UGameplayEffect;
 /**
  * 
  */
@@ -13,6 +15,10 @@ UCLASS()
 class ACTIONGAME_API UGA_PrimaryAttack : public UAG_GameplayAbility
 {
 	GENERATED_BODY()
+
+protected:
+	UPROPERTY(EditDefaultsOnly, Category = "Animation")
+	UAnimMontage* FireMontage;
 
 	/** 技能真正逻辑 */
 	virtual void OnAbilityActivated() override;
@@ -23,4 +29,13 @@ class ACTIONGAME_API UGA_PrimaryAttack : public UAG_GameplayAbility
 	bool DoCameraTrace(FHitResult& OutHit, FVector& OutAimPoint);
 
 	void DoWeaponTrace(const FVector& AimPoint);
+
+	void DoTrace();
+
+	void ApplyEffect();
+
+	UPROPERTY(EditDefaultsOnly, Category = "Sprint")
+	TSubclassOf<UGameplayEffect> FireStateEffect;
+
+	FActiveGameplayEffectHandle FireEffectHandle;
 };

@@ -104,6 +104,14 @@ void AActionGameCharacter::BeginPlay()
 			HandleInteractCandidateChanged(Actor, true);
 		}
 	}
+
+	if (UAbilitySystemComponent* ASC = GetAbilitySystemComponent())
+	{
+		ASC->RegisterGameplayTagEvent(
+			FGameplayTag::RequestGameplayTag("State.Firing"),
+			EGameplayTagEventType::NewOrRemoved
+		).AddUObject(this, &ThisClass::OnFiringTagChanged);
+	}
 }
 
 void AActionGameCharacter::PostInitializeComponents()
@@ -437,13 +445,9 @@ void AActionGameCharacter::PossessedBy(AController* NewController)
 	Super::PossessedBy(NewController);
 
 	AbilitySystemComponent->InitAbilityActorInfo(this, this);
-	UE_LOG(LogTemp, Warning, TEXT("PossessedBy InitAbilityActorInfo Completed"));
-
 	GiveAbilities();
 	ApplyStartupEffects();
-
 	GrantSkillAbilities();
-
 	BindASCAttributeDelegates();
 }
 
@@ -453,8 +457,14 @@ void AActionGameCharacter::OnRep_PlayerState()
 
 	// 告诉ASC谁拥有它，作用到谁身上
 	AbilitySystemComponent->InitAbilityActorInfo(this, this);
-	UE_LOG(LogTemp, Warning, TEXT("OnRep_PlayerState InitAbilityActorInfo Completed"));
+}
 
+void AActionGameCharacter::OnFiringTagChanged(const FGameplayTag Tag, int32 Count)
+{
+	// 锁定朝向
+	bFiring = Count > 0;
+	bUseControllerRotationYaw = bFiring;
+	GetCharacterMovement()->bOrientRotationToMovement = !bFiring;
 }
 
 FCharacterData AActionGameCharacter::GetCharacterData() const

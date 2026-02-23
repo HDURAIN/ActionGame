@@ -3,6 +3,10 @@
 
 #include "AbilitySystem/Abilities/GA_PrimaryAttack.h"
 #include "ActionGame/ActionGameCharacter.h"
+#include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
+#include "Abilities/Tasks/AbilityTask_WaitDelay.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "TimerManager.h"
 
 FORCEINLINE ECollisionChannel GetChannel(FName Name)
 {
@@ -30,13 +34,8 @@ namespace CollisionChannels
 
 void UGA_PrimaryAttack::OnAbilityActivated()
 {
-	FHitResult CameraHit;
-	FVector AimPoint;
-
-	if (!DoCameraTrace(CameraHit, AimPoint))
-		return;
-
-	DoWeaponTrace(AimPoint);
+	ApplyEffect();
+	DoTrace();
 }
 
 void UGA_PrimaryAttack::OnAbilityEnded(bool bWasCancelled)
@@ -123,4 +122,30 @@ void UGA_PrimaryAttack::DoWeaponTrace(const FVector& AimPoint)
 		0,
 		1.5f
 	);
+}
+
+void UGA_PrimaryAttack::DoTrace()
+{
+	FHitResult CameraHit;
+	FVector AimPoint;
+
+	if (DoCameraTrace(CameraHit, AimPoint))
+	{
+		DoWeaponTrace(AimPoint);
+	}
+}
+
+void UGA_PrimaryAttack::ApplyEffect()
+{
+	const FGameplayAbilityActorInfo* ActorInfo = GetCurrentActorInfo();
+
+	if (FireStateEffect && ActorInfo->AbilitySystemComponent.IsValid())
+	{
+		FGameplayEffectContextHandle EffectContext = ActorInfo->AbilitySystemComponent->MakeEffectContext();
+		FGameplayEffectSpecHandle Spec = ActorInfo->AbilitySystemComponent->MakeOutgoingSpec(FireStateEffect, 1.f, EffectContext);
+		if (Spec.IsValid())
+		{
+			FireEffectHandle = ActorInfo->AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+		}
+	}
 }
