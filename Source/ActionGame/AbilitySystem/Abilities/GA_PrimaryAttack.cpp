@@ -7,6 +7,9 @@
 #include "Abilities/Tasks/AbilityTask_WaitDelay.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "TimerManager.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
+#include "NiagaraComponent.h"
 
 FORCEINLINE ECollisionChannel GetChannel(FName Name)
 {
@@ -30,6 +33,19 @@ namespace CollisionChannels
 		static ECollisionChannel Channel = GetChannel("WeaponTrace");
 		return Channel;
 	}
+}
+
+UGA_PrimaryAttack::UGA_PrimaryAttack()
+{
+	// 本地预测执行：
+	// 客户端立即响应输入以保证手感，
+	// 服务器随后校验并同步最终结果
+	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
+
+	// 每个 Avatar 拥有一个独立的 Ability 实例：
+	// - 允许 Ability 内部保存临时状态
+	// - 避免并发预测时状态互相覆盖
+	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 }
 
 void UGA_PrimaryAttack::OnAbilityActivated()
@@ -122,6 +138,26 @@ void UGA_PrimaryAttack::DoWeaponTrace(const FVector& AimPoint)
 		0,
 		1.5f
 	);
+
+	if (bHit && Hit.bBlockingHit)
+	{
+		if (UAbilitySystemComponent* ASC = GetASC())
+		{
+			FGameplayCueParameters CueParams;
+			CueParams.Location = Hit.ImpactPoint;
+			CueParams.Normal = Hit.ImpactNormal;
+			CueParams.Instigator = GetAvatarActorFromActorInfo();
+			CueParams.EffectCauser = GetAvatarActorFromActorInfo();
+
+			// 可选：把HitResult也带进去（有些版本字段/接口略有差异）
+			// CueParams.PhysicalMaterial = Hit.PhysMaterial.Get();
+
+			static const FGameplayTag ImpactCueTag =
+				FGameplayTag::RequestGameplayTag(FName("GameplayCue.Weapon.Impact"));
+
+			ASC->ExecuteGameplayCue(ImpactCueTag, CueParams);
+		}
+	}
 }
 
 void UGA_PrimaryAttack::DoTrace()

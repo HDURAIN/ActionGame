@@ -135,6 +135,9 @@ public: // Input
 	UFUNCTION(BlueprintCallable, Category = "Input")
 	virtual void DoInteract();
 
+	UFUNCTION(BlueprintImplementableEvent, Category = "Debug|Input")
+	void BP_DebugBeforeSkillInput(EAbilityInputID InputID);
+
 	void Input_Skill_1();
 	void Input_Skill_2();
 	void Input_Skill_3();

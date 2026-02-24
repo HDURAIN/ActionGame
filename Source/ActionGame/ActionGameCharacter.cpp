@@ -353,6 +353,7 @@ void AActionGameCharacter::HandleInteractCandidateChanged(AActor* Actor, bool bA
 
 void AActionGameCharacter::Input_Skill_1()
 {
+	BP_DebugBeforeSkillInput(EAbilityInputID::Skill1);
 	AbilitySystemComponent->AbilityLocalInputPressed((int32)EAbilityInputID::Skill1);
 }
 

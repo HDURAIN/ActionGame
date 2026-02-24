@@ -8,6 +8,7 @@
 #include "GA_PrimaryAttack.generated.h"
 
 class UGameplayEffect;
+class UNiagaraSystem;
 /**
  * 
  */
@@ -15,6 +16,8 @@ UCLASS()
 class ACTIONGAME_API UGA_PrimaryAttack : public UAG_GameplayAbility
 {
 	GENERATED_BODY()
+
+	UGA_PrimaryAttack();
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Animation")
@@ -38,4 +41,7 @@ protected:
 	TSubclassOf<UGameplayEffect> FireStateEffect;
 
 	FActiveGameplayEffectHandle FireEffectHandle;
+
+	UPROPERTY(EditDefaultsOnly, Category = "VFX")
+	TObjectPtr<UNiagaraSystem> ImpactNiagara = nullptr;
 };
