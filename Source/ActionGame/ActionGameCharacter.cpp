@@ -87,8 +87,11 @@ AActionGameCharacter::AActionGameCharacter(const FObjectInitializer& ObjectIniti
 
 	InteractCandidateComponent = CreateDefaultSubobject<UInteractCandidateComponent>(TEXT("InteractCandidateComponent"));
 
-	WeaponComponent = CreateDefaultSubobject<UChildActorComponent>(TEXT("Weapon"));
-	WeaponComponent->SetupAttachment(GetMesh(), TEXT("WeaponSocket"));
+	WeaponComponentRight = CreateDefaultSubobject<UChildActorComponent>(TEXT("WeaponLeft"));
+	WeaponComponentRight->SetupAttachment(GetMesh(), TEXT("WeaponSocketRight"));
+
+	WeaponComponentLeft = CreateDefaultSubobject<UChildActorComponent>(TEXT("WeaponRight"));
+	WeaponComponentLeft->SetupAttachment(GetMesh(), TEXT("WeaponSocketLeft"));
 }
 
 void AActionGameCharacter::BeginPlay()
@@ -331,8 +334,8 @@ void AActionGameCharacter::UnbindASCAttributeDelegates()
 
 AActor* AActionGameCharacter::GetWeaponActor() const
 {
-	if (!WeaponComponent) return nullptr;
-	return WeaponComponent->GetChildActor();
+	if (!WeaponComponentRight) return nullptr;
+	return WeaponComponentRight->GetChildActor();
 }
 
 void AActionGameCharacter::HandleInteractCandidateChanged(AActor* Actor, bool bAdded)

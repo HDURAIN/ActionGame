@@ -34,6 +34,9 @@ protected:
 	UFUNCTION(BlueprintCallable, meta = (BlueprintThreadSafe))
 	class UBlendSpace* GetFireLocomotionBlendspace() const;
 
+	UFUNCTION(BlueprintCallable, meta = (BlueprintThreadSafe))
+	class UAnimSequenceBase* GetFireIdleAnimation() const;
+
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Animation")
 	TObjectPtr<UCharacterAnimDataAsset> DefaultCharacterAnimDataAsset; 
 };

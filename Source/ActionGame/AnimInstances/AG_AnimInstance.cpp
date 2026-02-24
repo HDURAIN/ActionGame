@@ -140,3 +140,29 @@ UBlendSpace* UAG_AnimInstance::GetFireLocomotionBlendspace() const
 		? DefaultCharacterAnimDataAsset->CharacterAnimationData.FireMovementBlendSpace
 		: nullptr;
 }
+
+UAnimSequenceBase* UAG_AnimInstance::GetFireIdleAnimation() const
+{
+	// 编辑器模式下返回默认动画，避免崩溃和空白预览
+	if (GIsEditor && !GIsPlayInEditorWorld)
+	{
+		return IsValid(DefaultCharacterAnimDataAsset)
+			? DefaultCharacterAnimDataAsset->CharacterAnimationData.FireIdleAnimationAsset
+			: nullptr;
+	}
+
+	// 游戏运行时逻辑
+	if (AActionGameCharacter* Character = Cast<AActionGameCharacter>(GetOwningActor()))
+	{
+		FCharacterData CharData = Character->GetCharacterData();
+		if (IsValid(CharData.CharacterAnimDataAsset))
+		{
+			return CharData.CharacterAnimDataAsset->CharacterAnimationData.FireIdleAnimationAsset;
+		}
+	}
+
+	// 回退到默认动画
+	return IsValid(DefaultCharacterAnimDataAsset)
+		? DefaultCharacterAnimDataAsset->CharacterAnimationData.FireIdleAnimationAsset
+		: nullptr;
+}

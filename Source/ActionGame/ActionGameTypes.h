@@ -42,6 +42,9 @@ struct FCharacterAnimationData
 
 	UPROPERTY(EditDefaultsOnly)
 	class UBlendSpace* FireMovementBlendSpace = nullptr;
+
+	UPROPERTY(EditDefaultsOnly)
+	class UAnimSequenceBase* FireIdleAnimationAsset = nullptr;
 };
 
 USTRUCT(BlueprintType)
