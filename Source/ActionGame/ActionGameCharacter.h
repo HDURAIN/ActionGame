@@ -23,104 +23,72 @@ class USpringArmComponent;
 class UFootstepsComponent;
 class UItemContainerComponent;
 class UInteractCandidateComponent;
+class UChildActorComponent;
+class UCharacterDataAsset;
 struct FInputActionValue;
-
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTemplateCharacter, Log, All);
 
 /**
- *  A simple player-controllable third person character
- *  Implements a controllable orbiting camera
+ * A simple player-controllable third person character.
+ * - Third-person camera
+ * - GAS integration
+ * - Interaction / movement / startup initialization
  */
-UCLASS(abstract)
+UCLASS(Abstract)
 class AActionGameCharacter : public ACharacter, public IAbilitySystemInterface
 {
 	GENERATED_BODY()
 
 public:
+	// =========================================================================
+	// Construction
+	// =========================================================================
+
 	/** Constructor */
 	AActionGameCharacter(const FObjectInitializer& ObjectInitializer);
 
-	void BeginPlay() override;
+	// =========================================================================
+	// Engine Lifecycle
+	// =========================================================================
 
-private: // Camera
-	/** Camera boom positioning the camera behind the character */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta = (AllowPrivateAccess = "true"))
-	USpringArmComponent* CameraBoom;
+	virtual void BeginPlay() override;
+	virtual void PostInitializeComponents() override;
+	virtual void PawnClientRestart() override;
+	virtual void Landed(const FHitResult& Hit) override;
 
-	/** Follow camera */
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="Components", meta = (AllowPrivateAccess = "true"))
-	UCameraComponent* FollowCamera;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UChildActorComponent> WeaponComponentRight;
-
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UChildActorComponent> WeaponComponentLeft;
-
-protected: // Input
-
-	/** Jump Input Action */
-	UPROPERTY(EditAnywhere, Category = "Input")
-	UInputAction* JumpAction;
-
-	/** Move Input Action */
-	UPROPERTY(EditAnywhere, Category = "Input")
-	UInputAction* MoveAction;
-
-	/** Look Input Action */
-	UPROPERTY(EditAnywhere, Category = "Input")
-	UInputAction* LookAction;
-
-	/** Mouse Look Input Action */
-	UPROPERTY(EditAnywhere, Category = "Input")
-	UInputAction* MouseLookAction;
-
-	UPROPERTY(EditAnywhere, Category = "Input")
-	UInputAction* CrouchAction;
-
-	UPROPERTY(EditAnywhere, Category = "Input")
-	UInputAction* SprintAction;
-
-	UPROPERTY(EditAnywhere, Category = "Input")
-	UInputAction* InteractAction;
-
-	UPROPERTY(EditAnywhere, Category = "Input")
-	UInputAction* Skill_1_Action;
-
-	UPROPERTY(EditAnywhere, Category = "Input")
-	UInputAction* Skill_2_Action;
-
-	UPROPERTY(EditAnywhere, Category = "Input")
-	UInputAction* Skill_3_Action;
-
-	UPROPERTY(EditAnywhere, Category = "Input")
-	UInputAction* Skill_4_Action;
-
-protected: // Input
-
-	/** Initialize input action bindings */
+protected:
+	/** Initializes input bindings */
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-public: // Input
+	/** Server-side possession initialization */
+	virtual void PossessedBy(AController* NewController) override;
 
-	/** Handles move inputs from either controls or UI interfaces */
-	UFUNCTION(BlueprintCallable, Category="Input")
+	/** Client-side PlayerState replication initialization */
+	virtual void OnRep_PlayerState() override;
+
+public:
+	// =========================================================================
+	// Input API
+	// =========================================================================
+
+	/** Handles move input from player controls or UI */
+	UFUNCTION(BlueprintCallable, Category = "Input")
 	virtual void DoMove(const FInputActionValue& Value);
 
-	/** Handles look inputs from either controls or UI interfaces */
-	UFUNCTION(BlueprintCallable, Category="Input")
+	/** Handles look input from player controls or UI */
+	UFUNCTION(BlueprintCallable, Category = "Input")
 	virtual void DoLook(const FInputActionValue& Value);
 
-	/** Handles jump pressed inputs from either controls or UI interfaces */
-	UFUNCTION(BlueprintCallable, Category="Input")
+	/** Handles jump pressed */
+	UFUNCTION(BlueprintCallable, Category = "Input")
 	virtual void DoJumpStart();
 
-	/** Handles jump pressed inputs from either controls or UI interfaces */
-	UFUNCTION(BlueprintCallable, Category="Input")
+	/** Handles jump released */
+	UFUNCTION(BlueprintCallable, Category = "Input")
 	virtual void DoJumpEnd();
 
-	UFUNCTION(BlueprintCallable, Category="Input")
+	UFUNCTION(BlueprintCallable, Category = "Input")
 	virtual void DoCrouchActivate();
 
 	UFUNCTION(BlueprintCallable, Category = "Input")
@@ -135,6 +103,7 @@ public: // Input
 	UFUNCTION(BlueprintCallable, Category = "Input")
 	virtual void DoInteract();
 
+	/** Debug hook before forwarding skill input to GAS */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Debug|Input")
 	void BP_DebugBeforeSkillInput(EAbilityInputID InputID);
 
@@ -142,45 +111,176 @@ public: // Input
 	void Input_Skill_2();
 	void Input_Skill_3();
 	void Input_Skill_4();
+
+	/** Grants skill abilities */
 	void GrantSkillAbilities();
 
-public: // Camera
+	UFUNCTION(BlueprintCallable, Category = "Input")
+	FVector GetMuzzleLocation() const;
 
-	/** Returns CameraBoom subobject **/
-	FORCEINLINE class USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
+public:
+	// =========================================================================
+	// Camera Accessors
+	// =========================================================================
 
-	/** Returns FollowCamera subobject **/
-	FORCEINLINE class UCameraComponent* GetFollowCamera() const { return FollowCamera; }
+	/** Returns camera boom subobject */
+	FORCEINLINE USpringArmComponent* GetCameraBoom() const { return CameraBoom; }
 
-public: // Ability System
+	/** Returns follow camera subobject */
+	FORCEINLINE UCameraComponent* GetFollowCamera() const { return FollowCamera; }
 
-	virtual void PostInitializeComponents() override;
+public:
+	// =========================================================================
+	// Ability System
+	// =========================================================================
 
-	bool ApplyGameplayEffectToSelf(TSubclassOf<UGameplayEffect> Effect, FGameplayEffectContextHandle InEffectContext);
+	/** Applies a GameplayEffect to self */
+	bool ApplyGameplayEffectToSelf(
+		TSubclassOf<UGameplayEffect> Effect,
+		FGameplayEffectContextHandle InEffectContext
+	);
 
+	/** IAbilitySystemInterface */
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
-	virtual void PawnClientRestart() override;
+	/** 向自身发送技能输入Gameplay Event（后续供 Skill1~4 输入函数复用） */
+	void SendSkillInputEvent(const FGameplayTag& EventTag);
 
-	virtual void Landed(const FHitResult& Hit) override;
-
-protected: // Ability System
-	
+protected:
+	/** Grants startup abilities */
 	void GiveAbilities();
 
+	/** Applies startup effects */
 	void ApplyStartupEffects();
 
-	// UE 网络/控制器系统自动调用的两个回调
-	// 服务端初始化
-	virtual void PossessedBy(AController* NewController) override;
-	// 客户端初始化
-	virtual void OnRep_PlayerState() override;
+	/** GAS tag change callback */
+	UFUNCTION()
+	void OnFiringTagChanged(const FGameplayTag Tag, int32 Count);
 
-	UPROPERTY(EditDefaultsOnly)
-	UAG_AbilitySystemComponentBase* AbilitySystemComponent;
-	
-	UPROPERTY(Transient)
-	UAG_AttributeSetBase* AttributeSet;
+public:
+	// =========================================================================
+	// Character Data
+	// =========================================================================
+
+	UFUNCTION(BlueprintCallable, Category = "Character|Data")
+	FCharacterData GetCharacterData() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Character|Data")
+	void SetCharacterData(const FCharacterData& InCharacterData);
+
+	UFUNCTION(BlueprintCallable, Category = "Character|Data")
+	UFootstepsComponent* GetFootstepsComponent() const;
+
+protected:
+	/** RepNotify for runtime character data */
+	UFUNCTION()
+	void OnRep_CharacterData();
+
+	/** Initializes runtime state from character data */
+	virtual void InitFromCharacterData(const FCharacterData& InCharacterData, bool bFromReplication = false);
+
+public:
+	// =========================================================================
+	// Attributes / ASC Delegates
+	// =========================================================================
+
+	virtual void OnMaxJumpCountChanged(const FOnAttributeChangeData& Data);
+
+	void BindASCAttributeDelegates();
+	void UnbindASCAttributeDelegates();
+
+	UFUNCTION(BlueprintCallable, Category = "Components|Weapon")
+	AActor* GetWeaponActor() const;
+
+public:
+	// =========================================================================
+	// Runtime State Queries
+	// =========================================================================
+
+	UFUNCTION(BlueprintPure, Category = "State")
+	bool IsFiring() const { return bFiring; }
+
+protected:
+	// =========================================================================
+	// Input Assets
+	// =========================================================================
+
+	/** Jump input action */
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> JumpAction;
+
+	/** Move input action */
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> MoveAction;
+
+	/** Look input action (gamepad / stick) */
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> LookAction;
+
+	/** Look input action (mouse) */
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> MouseLookAction;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> CrouchAction;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> SprintAction;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> InteractAction;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> Skill_1_Action;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> Skill_2_Action;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> Skill_3_Action;
+
+	UPROPERTY(EditAnywhere, Category = "Input")
+	TObjectPtr<UInputAction> Skill_4_Action;
+
+protected:
+	// =========================================================================
+	// Character Data (Runtime / Static)
+	// =========================================================================
+
+	/** Runtime replicated character data */
+	UPROPERTY(ReplicatedUsing = OnRep_CharacterData)
+	FCharacterData CharacterData;
+
+	/** Static character config set in Blueprint */
+	UPROPERTY(EditDefaultsOnly, Category = "Character|Data")
+	TObjectPtr<UCharacterDataAsset> CharacterDataAsset;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Character|Data")
+	TObjectPtr<UFootstepsComponent> FootstepsComponent;
+
+protected:
+	// =========================================================================
+	// Gameplay Events / Tags / Components
+	// =========================================================================
+
+	UPROPERTY(EditDefaultsOnly, Category = "Abilities|Events")
+	FGameplayTag JumpEventTag;
+
+	// 技能输入事件（固定4槽位，Pressed）
+	UPROPERTY(EditDefaultsOnly, Category = "Abilities|Events")
+	FGameplayTag Skill1PressedEventTag;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Abilities|Events")
+	FGameplayTag Skill2PressedEventTag;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Abilities|Events")
+	FGameplayTag Skill3PressedEventTag;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Abilities|Events")
+	FGameplayTag Skill4PressedEventTag;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Abilities|Tags")
+	FGameplayTagContainer InAirTags;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Abilities|Tags")
 	FGameplayTag CrouchAbilityTag;
@@ -191,85 +291,65 @@ protected: // Ability System
 	UPROPERTY(EditDefaultsOnly, Category = "Abilities|Tags")
 	FGameplayTag InteractAbilityTag;
 
-	// 回调
-	UFUNCTION()
-	void OnFiringTagChanged(const FGameplayTag Tag, int32 Count);
+	UPROPERTY(EditDefaultsOnly, Category = "Abilities")
+	TObjectPtr<UAG_AbilitySystemComponentBase> AbilitySystemComponent;
 
-public: // Data Assets
-	
-	UFUNCTION(BlueprintCallable)
-	FCharacterData GetCharacterData() const;
-
-	UFUNCTION(BlueprintCallable)
-	void SetCharacterData(const FCharacterData& InCharacterData);
-
-	UFootstepsComponent* GetFootstepsComponent() const;
-
-protected: // Data Assets
-
-	// 动态的实时的CharacterData
-	UPROPERTY(ReplicatedUsing = OnRep_CharacterData)
-	FCharacterData CharacterData;
-
-	// 客户端调用
-	// 跟OnRep_Playerstate有什么区别？
-	UFUNCTION()
-	void OnRep_CharacterData();
-
-	virtual void InitFromCharacterData(const FCharacterData& InCharacterData, bool bFromReplication = false);
-
-	// 静态的，在蓝图中设置的
-	UPROPERTY(EditDefaultsOnly)
-	class UCharacterDataAsset* CharacterDataAsset;
-
-	UPROPERTY(BlueprintReadOnly)
-	TObjectPtr<UFootstepsComponent> FootstepsComponent;
-
-protected:	// Gameplay Events
-
-	// 好像可以删除？
-	UPROPERTY(EditDefaultsOnly)
-	FGameplayTag JumpEventTag;
-
-protected:	// Gameplay Tags
-
-	UPROPERTY(EditDefaultsOnly)
-	FGameplayTagContainer InAirTags;
-
-protected: // Item
-	TObjectPtr<UItemContainerComponent> ItemContainerComponent;
-
-	// 好像可以删除？
-	UPROPERTY(EditDefaultsOnly, Category="Test")
-	TObjectPtr<UDA_Item> TestStartupItem_SpeedUp;
-
-	// 好像可以删除？
-	UPROPERTY(EditDefaultsOnly, Category="Test")
-	TObjectPtr<UDA_Item> TestStartupItem_MoreJump;
-
-public: // Attribute
-	virtual void OnMaxJumpCountChanged(const FOnAttributeChangeData& Data);
-
-	FDelegateHandle MaxJumpCountChangedHandle;
-
-	void BindASCAttributeDelegates();
-
-	void UnbindASCAttributeDelegates();
-
-	UFUNCTION(BlueprintCallable)
-	AActor* GetWeaponActor() const;
+	UPROPERTY(Transient)
+	TObjectPtr<UAG_AttributeSetBase> AttributeSet;
 
 protected:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Interact")
+	// =========================================================================
+	// Item / Inventory
+	// =========================================================================
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components|Inventory")
+	TObjectPtr<UItemContainerComponent> ItemContainerComponent;
+
+protected:
+	// =========================================================================
+	// Interaction
+	// =========================================================================
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components|Interact")
 	TObjectPtr<UInteractCandidateComponent> InteractCandidateComponent;
 
 	void HandleInteractCandidateChanged(AActor* Actor, bool bAdded);
 
 protected:
+	// =========================================================================
+	// Runtime State
+	// =========================================================================
+
 	bool bFiring = false;
 
-public:
-	UFUNCTION(BlueprintPure)
-	bool IsFiring() const { return bFiring; }
-};
+protected:
+	// =========================================================================
+	// Delegate Handles
+	// =========================================================================
 
+	FDelegateHandle MaxJumpCountChangedHandle;
+
+private:
+	// =========================================================================
+	// Components - Camera
+	// =========================================================================
+
+	/** Camera boom positioning the camera behind the character */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components|Camera", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<USpringArmComponent> CameraBoom;
+
+	/** Follow camera */
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components|Camera", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UCameraComponent> FollowCamera;
+
+private:
+	// =========================================================================
+	// Components - Weapon
+	// =========================================================================
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components|Weapon", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UChildActorComponent> WeaponComponentRight;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components|Weapon", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UChildActorComponent> WeaponComponentLeft;
+};

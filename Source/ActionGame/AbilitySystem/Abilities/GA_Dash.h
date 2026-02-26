@@ -13,10 +13,5 @@ UCLASS()
 class ACTIONGAME_API UGA_Dash : public UAG_GameplayAbility
 {
 	GENERATED_BODY()
-	
-	/** 技能真正逻辑 */
-	virtual void OnAbilityActivated() override;
 
-	/** 技能结束逻辑 */
-	virtual void OnAbilityEnded(bool bWasCancelled) override;
 };

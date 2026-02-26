@@ -84,6 +84,7 @@ enum class EInteractType : uint8
 	None UMETA(DisplayName = "None")
 };
 
+// ÒÑ·ÏÆú
 UENUM(BlueprintType)
 enum class EAbilityInputID : uint8
 {
