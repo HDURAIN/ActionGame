@@ -6,6 +6,8 @@
 #include "GameFramework/GameModeBase.h"
 #include "ActionGameGameMode.generated.h"
 
+class AActionGamePlayerController;
+
 /**
  *  Simple GameMode for a third person game
  */
@@ -18,6 +20,8 @@ public:
 	
 	/** Constructor */
 	AActionGameGameMode();
+
+	void NotifyPlayerDied(AActionGamePlayerController* PlayerController);
 };
 
 

@@ -25,7 +25,8 @@ public:
 	void ApplyDefaultMappings();
 
 	virtual void BeginPlay() override;
-	virtual void OnPossess(APawn* InPawn) override;
+
+	void RestartPlayerIn(float InTime);
 
 protected:
 
@@ -35,6 +36,21 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<UPlayerHUDWidget> HUDWidgetClass;
+
+	virtual void OnPossess(APawn* InPawn) override;
+
+	virtual void OnUnPossess() override;
+
+	virtual void OnRep_Pawn() override;
+
+	UFUNCTION()
+	void OnPawnDeathStateChanged(const FGameplayTag CallbackTag, int32 NewCount);
+
+	void RestartPlayer();
+
+	FTimerHandle RestartPlayerTimerHandle;
+
+	FDelegateHandle DeathStateTagDelegate;
 
 private:
 

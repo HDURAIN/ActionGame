@@ -185,6 +185,7 @@ public:
 	// =========================================================================
 
 	virtual void OnMaxJumpCountChanged(const FOnAttributeChangeData& Data);
+	void OnHealthAttributeChanged(const FOnAttributeChangeData& Data);
 
 	void BindASCAttributeDelegates();
 	void UnbindASCAttributeDelegates();
@@ -279,6 +280,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Abilities|Events")
 	FGameplayTag Skill4PressedEventTag;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Abilities|Events")
+	FGameplayTag ZeroHealthEventTag;
+
 	UPROPERTY(EditDefaultsOnly, Category = "Abilities|Tags")
 	FGameplayTagContainer InAirTags;
 
@@ -290,6 +294,9 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Abilities|Tags")
 	FGameplayTag InteractAbilityTag;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Abilities|Tags")
+	FGameplayTag RagdollStateTag;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Abilities")
 	TObjectPtr<UAG_AbilitySystemComponentBase> AbilitySystemComponent;
@@ -352,4 +359,18 @@ private:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components|Weapon", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UChildActorComponent> WeaponComponentLeft;
+
+public:
+	// =========================================================================
+	// Death
+	// =========================================================================
+	void StartRagdoll();
+
+protected:
+	// =========================================================================
+	// Death
+	// =========================================================================
+
+	UFUNCTION()
+	void OnRagdollStateTagChanged(const FGameplayTag CallbackTag, int32 NewCount);
 };

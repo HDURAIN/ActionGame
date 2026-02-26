@@ -34,6 +34,8 @@
 #include "GameFramework/Controller.h"
 #include "GameFramework/SpringArmComponent.h"
 
+#include "GameplayEffectExtension.h"
+
 #include "InputActionValue.h"
 #include "InputMappingContext.h"
 
@@ -89,6 +91,8 @@ AActionGameCharacter::AActionGameCharacter(const FObjectInitializer& ObjectIniti
 	AbilitySystemComponent = CreateDefaultSubobject<UAG_AbilitySystemComponentBase>(TEXT("AbilitySystemComponent"));
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(AttributeSet->GetHealthAttribute()).AddUObject(this, &AActionGameCharacter::OnHealthAttributeChanged);
+	AbilitySystemComponent->RegisterGameplayTagEvent(FGameplayTag::RequestGameplayTag(TEXT("State.Ragdoll"), EGameplayTagEventType::NewOrRemoved)).AddUObject(this, &AActionGameCharacter::OnRagdollStateTagChanged);
 
 	AttributeSet = CreateDefaultSubobject<UAG_AttributeSetBase>(TEXT("AttributeSet"));
 
@@ -510,6 +514,24 @@ void AActionGameCharacter::OnMaxJumpCountChanged(const FOnAttributeChangeData& D
 	JumpMaxCount = NewJumpCount;
 }
 
+void AActionGameCharacter::OnHealthAttributeChanged(const FOnAttributeChangeData& Data)
+{
+	if (Data.NewValue <= 0.f && Data.OldValue > 0.f)
+	{
+		AActionGameCharacter* OtherCharacter = nullptr;
+
+		if (Data.GEModData)
+		{
+			const FGameplayEffectContextHandle& EffectContext = Data.GEModData->EffectSpec.GetEffectContext();
+			OtherCharacter = Cast<AActionGameCharacter>(EffectContext.GetInstigator());
+		}
+
+		FGameplayEventData EventPayload;
+		EventPayload.EventTag = ZeroHealthEventTag;
+		UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, ZeroHealthEventTag, EventPayload);
+	}
+}
+
 void AActionGameCharacter::BindASCAttributeDelegates()
 {
 	if (!AbilitySystemComponent)
@@ -563,5 +585,28 @@ void AActionGameCharacter::HandleInteractCandidateChanged(AActor* Actor, bool bA
 	if (AChestActor* Chest = Cast<AChestActor>(Actor))
 	{
 		Chest->SetInteractUIVisible(bAdded);
+	}
+}
+
+void AActionGameCharacter::OnRagdollStateTagChanged(const FGameplayTag CallbackTag, int32 NewCount)
+{
+	if (NewCount > 0)
+	{
+		StartRagdoll();
+	}
+}
+
+void AActionGameCharacter::StartRagdoll()
+{
+	USkeletalMeshComponent* SkeletalMesh = GetMesh();
+
+	if (SkeletalMesh && !SkeletalMesh->IsSimulatingPhysics())
+	{
+		SkeletalMesh->SetCollisionProfileName(TEXT("Ragdoll"));
+		SkeletalMesh->SetSimulatePhysics(true);
+		SkeletalMesh->SetAllPhysicsLinearVelocity(FVector::Zero());
+		SkeletalMesh->SetAllPhysicsAngularVelocityInDegrees(FVector::Zero());
+		SkeletalMesh->WakeAllRigidBodies();
+		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	}
 }
