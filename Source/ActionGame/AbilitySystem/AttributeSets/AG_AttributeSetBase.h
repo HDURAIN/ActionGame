@@ -55,11 +55,22 @@ public:
 	FGameplayAttributeData Gold;
 	ATTRIBUTE_ACCESSORS(UAG_AttributeSetBase, Gold)
 
+	UPROPERTY(BlueprintReadOnly, Category = "Combat", ReplicatedUsing = OnRep_AttackPower)
+	FGameplayAttributeData AttackPower;
+	ATTRIBUTE_ACCESSORS(UAG_AttributeSetBase, AttackPower)
+
+	UPROPERTY(BlueprintReadOnly, Category = "Combat", ReplicatedUsing = OnRep_DamageMultiplier)
+	FGameplayAttributeData DamageMultiplier;
+	ATTRIBUTE_ACCESSORS(UAG_AttributeSetBase, DamageMultiplier)
+
+	UPROPERTY(BlueprintReadOnly, Category = "Combat", ReplicatedUsing = OnRep_CooldownReduction)
+	FGameplayAttributeData CooldownReduction;
+	ATTRIBUTE_ACCESSORS(UAG_AttributeSetBase, CooldownReduction)
+
 protected:
 	// 修改Attribute后的纠错函数
 	virtual void PostGameplayEffectExecute(const struct FGameplayEffectModCallbackData& Data) override;
 	
-
 	/**
 	* 当属性完成网络复制后调用的通知函数（客户端）
 	*/
@@ -86,4 +97,13 @@ protected:
 
 	UFUNCTION()
 	virtual void OnRep_Gold(const FGameplayAttributeData& OldGold);
+
+	UFUNCTION()
+	virtual void OnRep_AttackPower(const FGameplayAttributeData& OldAttackPower);
+
+	UFUNCTION()
+	virtual void OnRep_DamageMultiplier(const FGameplayAttributeData& OldDamageMultiplier);
+
+	UFUNCTION()
+	virtual void OnRep_CooldownReduction(const FGameplayAttributeData& OldCooldownReduction);
 };

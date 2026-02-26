@@ -64,6 +64,22 @@ void UAG_AttributeSetBase::OnRep_Gold(const FGameplayAttributeData& OldGold)
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UAG_AttributeSetBase, Gold, OldGold);
 }
 
+void UAG_AttributeSetBase::OnRep_AttackPower(const FGameplayAttributeData& OldAttackPower)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UAG_AttributeSetBase, AttackPower, OldAttackPower);
+}
+
+void UAG_AttributeSetBase::OnRep_DamageMultiplier(const FGameplayAttributeData& OldDamageMultiplier)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UAG_AttributeSetBase, DamageMultiplier, OldDamageMultiplier);
+}
+
+void UAG_AttributeSetBase::OnRep_CooldownReduction(const FGameplayAttributeData& OldCooldownReduction)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UAG_AttributeSetBase, CooldownReduction, OldCooldownReduction);
+}
+
+
 void UAG_AttributeSetBase::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -78,4 +94,7 @@ void UAG_AttributeSetBase::GetLifetimeReplicatedProps(TArray<class FLifetimeProp
 	DOREPLIFETIME_CONDITION_NOTIFY(UAG_AttributeSetBase, MoveSpeedMultiplier, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UAG_AttributeSetBase, MaxJumpCount, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UAG_AttributeSetBase, Gold, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UAG_AttributeSetBase, AttackPower, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UAG_AttributeSetBase, DamageMultiplier, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UAG_AttributeSetBase, CooldownReduction, COND_None, REPNOTIFY_Always);
 }
