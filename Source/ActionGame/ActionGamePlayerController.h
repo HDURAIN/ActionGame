@@ -26,7 +26,11 @@ public:
 
 	virtual void BeginPlay() override;
 
+	virtual void Tick(float DeltaSeconds) override;
+
 	void RestartPlayerIn(float InTime);
+
+	virtual void BeginSpectatingState() override;
 
 protected:
 

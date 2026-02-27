@@ -7,10 +7,11 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemLog.h"
 #include "GameFramework/PlayerController.h"
-#include "DrawDebugHelpers.h" // 如果你不画debug线也可以不加
+#include "DrawDebugHelpers.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/World.h"
-#include "AbilitySystem/AttributeSets/AG_AttributeSetBase.h" // 确保包含完整类型声明
+#include "AbilitySystem/AttributeSets/AG_EnemyAttributeSet.h"
+#include "AbilitySystem/AttributeSets/AG_AttributeSetBase.h"
 
 static ECollisionChannel GetChannelByName(FName Name)
 {

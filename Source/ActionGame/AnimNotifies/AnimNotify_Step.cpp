@@ -9,15 +9,24 @@
 void UAnimNotify_Step::Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation)
 {
 	Super::Notify(MeshComp, Animation);
+	if (!MeshComp) return;
 
-	check(MeshComp);
+	AActionGameCharacter* Character = Cast<AActionGameCharacter>(MeshComp->GetOwner());
+	if (!Character) return;
 
-	AActionGameCharacter* Character = MeshComp ? Cast<AActionGameCharacter>(MeshComp->GetOwner()) : nullptr;
-	if (Character)
+	if (UAbilitySystemComponent* ASC = Character->GetAbilitySystemComponent())
 	{
-		if (UFootstepsComponent* FootstepsComponent = Character->GetFootstepsComponent())
+		static const FGameplayTag DeadTag = FGameplayTag::RequestGameplayTag(TEXT("State.Dead"));
+		static const FGameplayTag RagdollTag = FGameplayTag::RequestGameplayTag(TEXT("State.Ragdoll"));
+
+		if (ASC->HasMatchingGameplayTag(DeadTag) || ASC->HasMatchingGameplayTag(RagdollTag))
 		{
-			FootstepsComponent->HandleFootstep(Foot);
+			return;
 		}
+	}
+
+	if (UFootstepsComponent* FootstepsComponent = Character->GetFootstepsComponent())
+	{
+		FootstepsComponent->HandleFootstep(Foot);
 	}
 }

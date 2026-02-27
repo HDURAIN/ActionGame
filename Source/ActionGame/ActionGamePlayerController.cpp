@@ -9,6 +9,8 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemInterface.h"
 #include "AbilitySystemBlueprintLibrary.h"
+#include "GameFramework/SpectatorPawn.h"
+#include "GameFramework/PawnMovementComponent.h"
 
 #include "ActionGameGameMode.h"
 
@@ -31,9 +33,14 @@ void AActionGamePlayerController::BeginPlay()
 	InitHUDWithPawn(GetPawn());
 }
 
+void AActionGamePlayerController::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+}
+
 void AActionGamePlayerController::RestartPlayerIn(float InTime)
 {
-	ChangeState(NAME_Spectating); // 修正：补全参数，假设需要传递状态名
+	ChangeState(NAME_Spectating);
 
 	GetWorld()->GetTimerManager().SetTimer(RestartPlayerTimerHandle, this, &AActionGamePlayerController::RestartPlayer, InTime, false);
 }
@@ -114,10 +121,31 @@ void AActionGamePlayerController::OnPawnDeathStateChanged(const FGameplayTag Cal
 	}
 }
 
+void AActionGamePlayerController::BeginSpectatingState()
+{
+	Super::BeginSpectatingState();
+
+	// 你想“完全不能动不能转”
+	SetIgnoreMoveInput(true);
+	SetIgnoreLookInput(true);
+
+	// 或者你想“能转镜头但不能飞”
+	// SetIgnoreMoveInput(true);
+
+	if (ASpectatorPawn* SP = GetSpectatorPawn())
+	{
+		if (UPawnMovementComponent* PMC = SP->GetMovementComponent())
+		{
+			PMC->StopMovementImmediately();
+			PMC->Deactivate();
+		}
+	}
+}
+
 void AActionGamePlayerController::RestartPlayer()
 {
-	UWorld* World = GetWorld();
 
+	UWorld* World = GetWorld();
 	AActionGameGameMode* GameMode = World ? Cast<AActionGameGameMode>(World->GetAuthGameMode()) : nullptr;
 
 	if (GameMode)

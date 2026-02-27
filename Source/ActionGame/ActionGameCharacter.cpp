@@ -609,4 +609,6 @@ void AActionGameCharacter::StartRagdoll()
 		SkeletalMesh->WakeAllRigidBodies();
 		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	}
+
+	SetLifeSpan(3.f);
 }
