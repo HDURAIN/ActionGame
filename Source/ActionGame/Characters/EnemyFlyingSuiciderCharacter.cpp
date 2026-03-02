@@ -53,6 +53,15 @@ void AEnemyFlyingSuiciderCharacter::Tick(float DeltaTime)
 
 	if (bExploded) return;
 
+	if (AbilitySystemComponent)
+	{
+		static const FGameplayTag RagdollTag = FGameplayTag::RequestGameplayTag(TEXT("State.Ragdoll"));
+		if (AbilitySystemComponent->HasMatchingGameplayTag(DeadTag) || AbilitySystemComponent->HasMatchingGameplayTag(RagdollTag))
+		{
+			return;
+		}
+	}
+
 	ACharacter* Target = GetTargetCharacter();
 	if (!IsValid(Target)) return;
 
@@ -71,7 +80,12 @@ void AEnemyFlyingSuiciderCharacter::OnTriggerBeginOverlap(
 	bool bFromSweep,
 	const FHitResult& SweepResult)
 {
-	if (bExploded) return;
+	// 死亡不能爆
+	if (AbilitySystemComponent)
+	{
+		FGameplayTag Tag = FGameplayTag::RequestGameplayTag(TEXT("State.Dead"));
+		if (bExploded || AbilitySystemComponent->HasMatchingGameplayTag(Tag)) return;
+	}
 	if (!OtherActor || OtherActor == this) return;
 
 	// 碰到任意 Character 就爆（你也可以改成只爆玩家阵营）

@@ -56,6 +56,7 @@ protected:
 
 private:
 	bool bExploded = false;
+	bool bCanExplod = true;
 
 	void ExplodeAndApply_Server();
 };

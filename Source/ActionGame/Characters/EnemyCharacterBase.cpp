@@ -11,6 +11,8 @@
 #include "GameplayEffectTypes.h"
 #include "GameplayEffectExtension.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "PhysicsEngine/BodySetup.h"
+#include "PhysicsEngine/ConstraintInstance.h"
 
 #include "AbilitySystem/AttributeSets/AG_EnemyAttributeSet.h"
 #include <ActionGameCharacter.h>
@@ -269,6 +271,7 @@ void AEnemyCharacterBase::OnHealthAttributeChanged(const FOnAttributeChangeData&
 
 		FGameplayEventData EventPayload;
 		EventPayload.EventTag = ZeroHealthEventTag;
+		EventPayload.Instigator = OtherCharacter;
 		UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, ZeroHealthEventTag, EventPayload);
 	}
 }
@@ -283,17 +286,25 @@ void  AEnemyCharacterBase::OnRagdollStateTagChanged(const FGameplayTag CallbackT
 
 void  AEnemyCharacterBase::StartRagdoll()
 {
-	USkeletalMeshComponent* SkeletalMesh = GetMesh();
+	if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
+	{
+		MoveComp->StopMovementImmediately();
+		MoveComp->DisableMovement();
+		MoveComp->SetMovementMode(MOVE_None);
+		MoveComp->Deactivate();
+	}
 
+	USkeletalMeshComponent* SkeletalMesh = GetMesh();
 	if (SkeletalMesh && !SkeletalMesh->IsSimulatingPhysics())
 	{
 		SkeletalMesh->SetCollisionProfileName(TEXT("Ragdoll"));
+		SkeletalMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 		SkeletalMesh->SetSimulatePhysics(true);
+		SkeletalMesh->SetEnableGravity(true);
 		SkeletalMesh->SetAllPhysicsLinearVelocity(FVector::Zero());
 		SkeletalMesh->SetAllPhysicsAngularVelocityInDegrees(FVector::Zero());
 		SkeletalMesh->WakeAllRigidBodies();
 		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	}
-
 	SetLifeSpan(3.f);
 }
