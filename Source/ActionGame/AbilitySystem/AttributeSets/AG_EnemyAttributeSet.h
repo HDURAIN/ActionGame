@@ -31,6 +31,10 @@ public:
 	FGameplayAttributeData MaxHealth;
 	ATTRIBUTE_ACCESSORS(UAG_EnemyAttributeSet, MaxHealth)
 
+	UPROPERTY(BlueprintReadOnly, Category = "BountyGold", ReplicatedUsing = OnRep_BountyGold)
+	FGameplayAttributeData BountyGold;
+	ATTRIBUTE_ACCESSORS(UAG_EnemyAttributeSet, BountyGold)
+
 protected:
 
 	virtual void PostGameplayEffectExecute(const struct FGameplayEffectModCallbackData& Data) override;
@@ -40,4 +44,7 @@ protected:
 
 	UFUNCTION()
 	virtual void OnRep_MaxHealth(const FGameplayAttributeData& OldMaxHealth);
+
+	UFUNCTION()
+	virtual void OnRep_BountyGold(const FGameplayAttributeData& OldBountyGold);
 };

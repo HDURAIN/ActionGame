@@ -528,6 +528,7 @@ void AActionGameCharacter::OnHealthAttributeChanged(const FOnAttributeChangeData
 
 		FGameplayEventData EventPayload;
 		EventPayload.EventTag = ZeroHealthEventTag;
+		EventPayload.Instigator = OtherCharacter;
 		UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, ZeroHealthEventTag, EventPayload);
 	}
 }

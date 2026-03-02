@@ -23,6 +23,11 @@ void UAG_EnemyAttributeSet::OnRep_MaxHealth(const FGameplayAttributeData& OldMax
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UAG_EnemyAttributeSet, MaxHealth, OldMaxHealth);
 }
 
+void UAG_EnemyAttributeSet::OnRep_BountyGold(const FGameplayAttributeData& OldBountyGold)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UAG_EnemyAttributeSet, BountyGold, OldBountyGold);
+}
+
 void UAG_EnemyAttributeSet::GetLifetimeReplicatedProps(TArray<class FLifetimeProperty>& OutLifetimeProps) const
 {
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
@@ -31,4 +36,5 @@ void UAG_EnemyAttributeSet::GetLifetimeReplicatedProps(TArray<class FLifetimePro
 	// 类  成员变量  同步条件 (COND_None)无限制  同步后是否调用OnRep
 	DOREPLIFETIME_CONDITION_NOTIFY(UAG_EnemyAttributeSet, Health, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UAG_EnemyAttributeSet, MaxHealth, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UAG_EnemyAttributeSet, BountyGold, COND_None, REPNOTIFY_Always);
 }
