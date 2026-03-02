@@ -33,13 +33,9 @@ void UGA_Interact::ActivateAbility(const FGameplayAbilitySpecHandle Handle, cons
 {
 	if (!ActorInfo || !ActorInfo->AvatarActor.IsValid())
 	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		EndAbility(Handle, ActorInfo, ActivationInfo, false, true);
 		return;
 	}
-	
-	// 必须先调用 Super
-	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
-	UE_LOG(LogTemp, Warning, TEXT("Call [ActivateAbility]"));
 
 	// ServerOnly 客户端触发时 GAS会自动转发到服务器执行
 	if (!HasAuthority(&ActivationInfo))
@@ -47,24 +43,45 @@ void UGA_Interact::ActivateAbility(const FGameplayAbilitySpecHandle Handle, cons
 		return;
 	}
 
+	// 必须先调用 Super
+	Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+
 	// 服务器端选择并校验交互目标（权威判定）
 	AActor* TargetActor = FindBestInteractableTarget(ActorInfo);
 	if (!TargetActor)
 	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
+		EndAbility(Handle, ActorInfo, ActivationInfo, false, true);
+		return;
+	}
+
+	AActor* Interactor = ActorInfo->AvatarActor.Get();
+
+	// 判断目标Actor是否实现了接口 （Server再校验）
+	if (!TargetActor->Implements<UInteractable>())
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, false, true);
+		return;
+	}
+
+	// 判断物体是否满足进行交互的条件
+	bool bCanInteract = false;
+	if (UInteractCandidateComponent* CandidateComp = Interactor->FindComponentByClass<UInteractCandidateComponent>())
+	{
+		bCanInteract = IInteractable::Execute_CanInteract(TargetActor, Interactor) && CandidateComp->IsInteractCandidate(TargetActor);
+	}
+	if (!bCanInteract)
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, false, true);
 		return;
 	}
 
 	// 提交Ability，消耗资源
 	if (!CommitAbility(Handle, ActorInfo, ActivationInfo))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("CommitAbility failed (cost or cooldown)"));
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		EndAbility(Handle, ActorInfo, ActivationInfo, false, true);
 		return;
 	}
-
-	TryInteractWithTarget(ActorInfo, TargetActor);
-
+	IInteractable::Execute_ExecuteInteract(TargetActor, Interactor);	
 	EndAbility(Handle, ActorInfo, ActivationInfo, false, false);
 }
 
@@ -146,7 +163,7 @@ bool UGA_Interact::CheckCost(const FGameplayAbilitySpecHandle Handle, const FGam
 * 无副作用 Client和Server都可以调用
 */
 AActor* UGA_Interact::FindBestInteractableTarget(const FGameplayAbilityActorInfo* ActorInfo) const
-{	
+{
 	// 基础校验
 	if (!ActorInfo || !ActorInfo->AvatarActor.IsValid())
 	{
