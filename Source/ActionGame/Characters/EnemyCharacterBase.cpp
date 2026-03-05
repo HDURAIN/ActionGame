@@ -2,7 +2,6 @@
 
 #include "Characters/EnemyCharacterBase.h"
 
-#include "AIController.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "Engine/World.h"
@@ -10,13 +9,12 @@
 #include "TimerManager.h"
 #include "Components/CapsuleComponent.h"
 #include "GameplayEffectTypes.h"
+#include "ActionGameTypes.h"
 #include "GameplayEffectExtension.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "PhysicsEngine/BodySetup.h"
-#include "PhysicsEngine/ConstraintInstance.h"
-
+#include "EnemyAIController.h"
 #include "AbilitySystem/AttributeSets/AG_EnemyAttributeSet.h"
-#include <ActionGameCharacter.h>
+#include "ActionGameCharacter.h"
 
 AEnemyCharacterBase::AEnemyCharacterBase()
 {
@@ -24,7 +22,7 @@ AEnemyCharacterBase::AEnemyCharacterBase()
 	bReplicates = true;
 
 	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
-	AIControllerClass = AAIController::StaticClass(); // 或你的自定义 AIController
+	AIControllerClass = AEnemyAIController::StaticClass(); // 或你的自定义 AIController
 
 	// =========================
 	// GAS: ASC + Enemy AttributeSet
@@ -51,6 +49,22 @@ AEnemyCharacterBase::AEnemyCharacterBase()
 UAbilitySystemComponent* AEnemyCharacterBase::GetAbilitySystemComponent() const
 {
 	return AbilitySystemComponent;
+}
+
+void AEnemyCharacterBase::ApplySpawnEntryConfig(const FEnemySpawnEntry& InConfig)
+{
+	EnemyMovementType = InConfig.MovementType;
+	TargetAcceptanceRadius = InConfig.AcceptanceRadius;
+	bUsePathfinding = InConfig.bUsePathfinding;
+
+	// 如果当前已经有目标，配置变化后可以重下发一次 MoveTo（可选但很实用）
+	if (ACharacter* Target = TargetCharacter.Get())
+	{
+		if (AEnemyAIController* EnemyController = Cast<AEnemyAIController>(GetController()))
+		{
+			EnemyController->ChaseTarget(Target);
+		}
+	}
 }
 
 void AEnemyCharacterBase::BeginPlay()
@@ -89,6 +103,7 @@ void AEnemyCharacterBase::BeginPlay()
 
 void AEnemyCharacterBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
+	GetWorldTimerManager().ClearTimer(ReacquireRetryHandle);
 	UnbindFromTargetDeath();
 	Super::EndPlay(EndPlayReason);
 }
@@ -97,6 +112,26 @@ void AEnemyCharacterBase::ReacquireTarget()
 {
 	ACharacter* NewTarget = FindNearestAliveCharacter();
 	SetTarget(NewTarget);
+
+	// 无目标：低频重试，避免“全死->复活后永远不再找”
+	if (!IsValid(NewTarget))
+	{
+		if (!GetWorldTimerManager().IsTimerActive(ReacquireRetryHandle))
+		{
+			GetWorldTimerManager().SetTimer(
+				ReacquireRetryHandle,
+				this,
+				&AEnemyCharacterBase::ReacquireTarget,
+				0.5f,
+				true
+			);
+		}
+	}
+	else
+	{
+		// 有目标：停止重试
+		GetWorldTimerManager().ClearTimer(ReacquireRetryHandle);
+	}
 }
 
 bool AEnemyCharacterBase::IsValidTargetCandidate(ACharacter* Candidate) const
@@ -123,6 +158,19 @@ void AEnemyCharacterBase::SetTarget(ACharacter* NewTarget)
 	{
 		BindToTargetDeath(NewTarget);
 	}
+
+	// 目标变化时驱动 AIController
+	if (AEnemyAIController* EnemyController = Cast<AEnemyAIController>(GetController()))
+	{
+		if (IsValid(NewTarget))
+		{
+			EnemyController->ChaseTarget(NewTarget);
+		}
+		else
+		{
+			EnemyController->StopChasing();
+		}
+	}
 }
 
 ACharacter* AEnemyCharacterBase::FindNearestAliveCharacter() const
@@ -141,7 +189,6 @@ ACharacter* AEnemyCharacterBase::FindNearestAliveCharacter() const
 		APawn* Pawn = PC->GetPawn();
 		ACharacter* Candidate = Cast<ACharacter>(Pawn);
 		if (!IsValid(Candidate)) continue;
-
 		if (!IsValidTargetCandidate(Candidate)) continue;
 		if (IsCharacterDead(Candidate)) continue;
 

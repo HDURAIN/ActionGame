@@ -1,16 +1,17 @@
 #include "Characters/EnemyFlyingSuiciderCharacter.h"
 
-#include "Components/SphereComponent.h"
-#include "GameFramework/CharacterMovementComponent.h"
-#include "AbilitySystemComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
-#include "GameplayEffect.h"
-#include "Engine/World.h"
+#include "AbilitySystemComponent.h"
+#include "ActionGameCharacter.h"
+#include "Components/SphereComponent.h"
 #include "Engine/OverlapResult.h"
+#include "Engine/World.h"
+#include "GameFramework/CharacterMovementComponent.h"
+#include "GameplayEffect.h"
 
 AEnemyFlyingSuiciderCharacter::AEnemyFlyingSuiciderCharacter()
 {
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 	bUseControllerRotationYaw = false;
 
 	TriggerSphere = CreateDefaultSubobject<USphereComponent>(TEXT("TriggerSphere"));
@@ -22,7 +23,10 @@ AEnemyFlyingSuiciderCharacter::AEnemyFlyingSuiciderCharacter()
 	TriggerSphere->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 	TriggerSphere->SetGenerateOverlapEvents(true);
 
-	TriggerSphere->OnComponentBeginOverlap.AddDynamic(this, &AEnemyFlyingSuiciderCharacter::OnTriggerBeginOverlap);
+	TriggerSphere->OnComponentBeginOverlap.AddDynamic(
+		this,
+		&AEnemyFlyingSuiciderCharacter::OnTriggerBeginOverlap
+	);
 }
 
 void AEnemyFlyingSuiciderCharacter::BeginPlay()
@@ -47,31 +51,6 @@ void AEnemyFlyingSuiciderCharacter::BeginPlay()
 	}
 }
 
-void AEnemyFlyingSuiciderCharacter::Tick(float DeltaTime)
-{
-	Super::Tick(DeltaTime);
-
-	if (bExploded) return;
-
-	if (AbilitySystemComponent)
-	{
-		static const FGameplayTag RagdollTag = FGameplayTag::RequestGameplayTag(TEXT("State.Ragdoll"));
-		if (AbilitySystemComponent->HasMatchingGameplayTag(DeadTag) || AbilitySystemComponent->HasMatchingGameplayTag(RagdollTag))
-		{
-			return;
-		}
-	}
-
-	ACharacter* Target = GetTargetCharacter();
-	if (!IsValid(Target)) return;
-
-	const FVector Dir = (Target->GetActorLocation() - GetActorLocation()).GetSafeNormal();
-	if (!Dir.IsNearlyZero())
-	{
-		AddMovementInput(Dir, 1.f);
-	}
-}
-
 void AEnemyFlyingSuiciderCharacter::OnTriggerBeginOverlap(
 	UPrimitiveComponent* OverlappedComp,
 	AActor* OtherActor,
@@ -80,31 +59,49 @@ void AEnemyFlyingSuiciderCharacter::OnTriggerBeginOverlap(
 	bool bFromSweep,
 	const FHitResult& SweepResult)
 {
-	// 死亡不能爆
-	if (AbilitySystemComponent)
+	if (bExploded)
 	{
-		FGameplayTag Tag = FGameplayTag::RequestGameplayTag(TEXT("State.Dead"));
-		if (bExploded || AbilitySystemComponent->HasMatchingGameplayTag(Tag)) return;
+		return;
 	}
-	if (!OtherActor || OtherActor == this) return;
 
-	// 碰到任意 Character 就爆（你也可以改成只爆玩家阵营）
-	if (!OtherActor->IsA(ACharacter::StaticClass())) return;
+	// 死亡不能爆
+	if (AbilitySystemComponent && DeadTag.IsValid() &&
+		AbilitySystemComponent->HasMatchingGameplayTag(DeadTag))
+	{
+		return;
+	}
+
+	if (!IsValid(OtherActor) || OtherActor == this)
+	{
+		return;
+	}
+
+	// 这里只炸玩家角色
+	if (!OtherActor->IsA(AActionGameCharacter::StaticClass()))
+	{
+		return;
+	}
 
 	// 服务器权威
-	if (!HasAuthority()) return;
+	if (!HasAuthority())
+	{
+		return;
+	}
 
 	ExplodeAndApply_Server();
 }
 
 void AEnemyFlyingSuiciderCharacter::ExplodeAndApply_Server()
 {
-	if (bExploded) return;
+	if (bExploded)
+	{
+		return;
+	}
+
 	bExploded = true;
 
 	const FVector Origin = GetActorLocation();
 
-	// 2) AoE Apply GE
 	if (ExplosionEffect)
 	{
 		UWorld* World = GetWorld();
@@ -113,7 +110,7 @@ void AEnemyFlyingSuiciderCharacter::ExplodeAndApply_Server()
 			FCollisionObjectQueryParams ObjParams;
 			ObjParams.AddObjectTypesToQuery(ECC_Pawn);
 
-			FCollisionShape Sphere = FCollisionShape::MakeSphere(ExplosionRadius);
+			const FCollisionShape Sphere = FCollisionShape::MakeSphere(ExplosionRadius);
 
 			TArray<FOverlapResult> Hits;
 			World->OverlapMultiByObjectType(
@@ -126,28 +123,43 @@ void AEnemyFlyingSuiciderCharacter::ExplodeAndApply_Server()
 
 			UAbilitySystemComponent* SourceASC = GetAbilitySystemComponent();
 
-			for (const FOverlapResult& R : Hits)
+			for (const FOverlapResult& Result : Hits)
 			{
-				ACharacter* Char = Cast<ACharacter>(R.GetActor());
-				if (!IsValid(Char) || Char == this) continue;
+				ACharacter* Character = Cast<ACharacter>(Result.GetActor());
+				if (!IsValid(Character) || Character == this)
+				{
+					continue;
+				}
 
+				if (AffectedActors.Contains(Character))
+				{
+					continue;
+				}
+				AffectedActors.Add(Character);
 
-				if (AffectedActors.Contains(Char)) continue;
-				AffectedActors.Add(Char);
-				// 过滤掉已死亡的角色（避免给尸体加效果）
-				// 这里复用你基类的 DeadTag 逻辑：从目标ASC查 DeadTag
-				UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Char);
-				if (!TargetASC) continue;
-				if (DeadTag.IsValid() && TargetASC->HasMatchingGameplayTag(DeadTag)) continue;
+				UAbilitySystemComponent* TargetASC =
+					UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Character);
+				if (!TargetASC)
+				{
+					continue;
+				}
+
+				// 不对已死亡目标施加效果
+				if (DeadTag.IsValid() && TargetASC->HasMatchingGameplayTag(DeadTag))
+				{
+					continue;
+				}
 
 				if (SourceASC)
 				{
-					FGameplayEffectContextHandle Ctx = SourceASC->MakeEffectContext();
-					Ctx.AddInstigator(this, this);
-					Ctx.AddSourceObject(this);
-					Ctx.AddOrigin(Origin);
+					FGameplayEffectContextHandle Context = SourceASC->MakeEffectContext();
+					Context.AddInstigator(this, this);
+					Context.AddSourceObject(this);
+					Context.AddOrigin(Origin);
 
-					FGameplayEffectSpecHandle Spec = SourceASC->MakeOutgoingSpec(ExplosionEffect, 1.f, Ctx);
+					FGameplayEffectSpecHandle Spec =
+						SourceASC->MakeOutgoingSpec(ExplosionEffect, 1.f, Context);
+
 					if (Spec.IsValid())
 					{
 						SourceASC->ApplyGameplayEffectSpecToTarget(*Spec.Data.Get(), TargetASC);
@@ -157,6 +169,5 @@ void AEnemyFlyingSuiciderCharacter::ExplodeAndApply_Server()
 		}
 	}
 
-	// 3) Destroy
 	Destroy();
 }

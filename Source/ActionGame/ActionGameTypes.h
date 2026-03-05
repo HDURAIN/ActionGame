@@ -5,10 +5,12 @@
 #include "CoreMinimal.h"
 #include "ActionGameTypes.generated.h"
 
+class AEnemyCharacterBase;
+
 USTRUCT(BlueprintType)
 struct FCharacterData
 {
-	GENERATED_USTRUCT_BODY()
+	GENERATED_BODY()
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "GAS")
 	TArray<TSubclassOf<class UGameplayEffect>> Effects;
@@ -26,7 +28,7 @@ struct FCharacterData
 USTRUCT(BlueprintType)
 struct FCharacterAnimationData
 {
-	GENERATED_USTRUCT_BODY()
+	GENERATED_BODY()
 
 	UPROPERTY(EditDefaultsOnly)
 	class UBlendSpace* MovementBlendspace = nullptr;
@@ -50,7 +52,7 @@ struct FCharacterAnimationData
 USTRUCT(BlueprintType)
 struct FInteractDisplayData
 {
-	GENERATED_USTRUCT_BODY()
+	GENERATED_BODY()
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	FText DisplayName;
@@ -62,22 +64,47 @@ struct FInteractDisplayData
 USTRUCT(BlueprintType)
 struct FAbilitySetData
 {
-	GENERATED_USTRUCT_BODY()
+	GENERATED_BODY()
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TArray<TSubclassOf<class UGameplayAbility>> Abilities;
 };
 
+UENUM(BlueprintType)
+enum class EEnemyMovementType : uint8
+{
+	Ground UMETA(DisplayName = "Ground"),
+	Flying UMETA(DisplayName = "Flying")
+};
+
 USTRUCT(BlueprintType)
 struct FEnemySpawnEntry
 {
-	GENERATED_USTRUCT_BODY()
+	GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-	TSubclassOf<ACharacter> EnemyClass;
+	/** 要生成的敌人类 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawn")
+	TSubclassOf<AEnemyCharacterBase> EnemyClass;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (ClampMin = "0"))
+	/** 权重 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawn", meta = (ClampMin = "0"))
 	int32 Weight = 1;
+
+	/** 移动类型：走地 / 飞行 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
+	EEnemyMovementType MovementType = EEnemyMovementType::Ground;
+
+	/** 生成高度偏移 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawn", meta = (ClampMin = "0.0"))
+	float SpawnHeightOffset = 0.f;
+
+	/** MoveTo 的接受半径 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement", meta = (ClampMin = "0.0"))
+	float AcceptanceRadius = 100.f;
+
+	/** 是否启用寻路 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
+	bool bUsePathfinding = true;
 };
 
 UENUM(BlueprintType)

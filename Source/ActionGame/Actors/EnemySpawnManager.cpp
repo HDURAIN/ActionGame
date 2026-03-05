@@ -2,8 +2,8 @@
 
 #include "Characters/EnemyCharacterBase.h"
 #include "Engine/World.h"
-#include "TimerManager.h"
 #include "GameFramework/Actor.h"
+#include "TimerManager.h"
 
 AEnemySpawnManager::AEnemySpawnManager()
 {
@@ -109,7 +109,6 @@ void AEnemySpawnManager::HandleSpawnTimerElapsed()
 	{
 		UE_LOG(LogTemp, Warning, TEXT("EnemySpawnManager: CanSpawn = false"));
 
-		// 非无限模式下，如果已经刷满，就直接停表
 		if (!bSpawnInfinitely && SpawnedEnemyCount >= TotalEnemyToSpawn)
 		{
 			StopSpawnTimer();
@@ -121,42 +120,11 @@ void AEnemySpawnManager::HandleSpawnTimerElapsed()
 
 	SpawnEnemyInternal();
 
-	// 刷完这次后如果达到上限，也停表
 	if (!bSpawnInfinitely && SpawnedEnemyCount >= TotalEnemyToSpawn)
 	{
 		StopSpawnTimer();
 	}
 }
-
-//bool AEnemySpawnManager::CanSpawn() const
-//{
-//	if (!bSpawningEnabled)
-//	{
-//		return false;
-//	}
-//
-//	if (!FocusActor.IsValid())
-//	{
-//		return false;
-//	}
-//
-//	if (SpawnRadiusMax < SpawnRadiusMin)
-//	{
-//		return false;
-//	}
-//
-//	if (EnemySpawnTable.Num() <= 0)
-//	{
-//		return false;
-//	}
-//
-//	if (!bSpawnInfinitely && SpawnedEnemyCount >= TotalEnemyToSpawn)
-//	{
-//		return false;
-//	}
-//
-//	return true;
-//}
 
 bool AEnemySpawnManager::CanSpawn() const
 {
@@ -203,8 +171,8 @@ bool AEnemySpawnManager::FindSpawnLocation(FVector& OutSpawnLocation) const
 	const FVector FocusLocation = FocusActor->GetActorLocation();
 
 	const float Radius = FMath::FRandRange(SpawnRadiusMin, SpawnRadiusMax);
-	const FVector RandomDirection2D = FVector(FMath::VRand());
-	FVector FlatDirection(RandomDirection2D.X, RandomDirection2D.Y, 0.f);
+	const FVector RandomDirection3D = FVector(FMath::VRand());
+	FVector FlatDirection(RandomDirection3D.X, RandomDirection3D.Y, 0.f);
 
 	if (!FlatDirection.Normalize())
 	{
@@ -212,14 +180,14 @@ bool AEnemySpawnManager::FindSpawnLocation(FVector& OutSpawnLocation) const
 	}
 
 	OutSpawnLocation = FocusLocation + FlatDirection * Radius;
-	OutSpawnLocation.Z += SpawnHeightOffset;
+	OutSpawnLocation.Z += SpawnHeightOffset; // 这里只加通用基础偏移
 
 	return true;
 }
 
-bool AEnemySpawnManager::PickEnemyClassWeighted(TSubclassOf<AEnemyCharacterBase>& OutEnemyClass) const
+bool AEnemySpawnManager::PickEnemySpawnEntryWeighted(FEnemySpawnEntry& OutEntry) const
 {
-	OutEnemyClass = nullptr;
+	OutEntry = FEnemySpawnEntry();
 
 	if (EnemySpawnTable.Num() <= 0)
 	{
@@ -261,7 +229,7 @@ bool AEnemySpawnManager::PickEnemyClassWeighted(TSubclassOf<AEnemyCharacterBase>
 		RunningWeight += Entry.Weight;
 		if (RandomValue <= RunningWeight)
 		{
-			OutEnemyClass = Entry.EnemyClass;
+			OutEntry = Entry;
 			return true;
 		}
 	}
@@ -284,12 +252,21 @@ bool AEnemySpawnManager::SpawnEnemyInternal()
 		return false;
 	}
 
-	TSubclassOf<AEnemyCharacterBase> EnemyClassToSpawn;
-	if (!PickEnemyClassWeighted(EnemyClassToSpawn))
+	FEnemySpawnEntry SelectedEntry;
+	if (!PickEnemySpawnEntryWeighted(SelectedEntry))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("EnemySpawnManager: Failed to pick enemy class from spawn table."));
+		UE_LOG(LogTemp, Warning, TEXT("EnemySpawnManager: Failed to pick enemy entry from spawn table."));
 		return false;
 	}
+
+	if (!SelectedEntry.EnemyClass)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EnemySpawnManager: Selected enemy entry has null EnemyClass."));
+		return false;
+	}
+
+	// 再叠加该敌人自己的额外生成高度偏移
+	SpawnLocation.Z += SelectedEntry.SpawnHeightOffset;
 
 	const FRotator SpawnRotation = FRotator::ZeroRotator;
 
@@ -299,7 +276,7 @@ bool AEnemySpawnManager::SpawnEnemyInternal()
 		ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
 	AEnemyCharacterBase* SpawnedEnemy = World->SpawnActor<AEnemyCharacterBase>(
-		EnemyClassToSpawn,
+		SelectedEntry.EnemyClass,
 		SpawnLocation,
 		SpawnRotation,
 		SpawnParams
@@ -310,6 +287,8 @@ bool AEnemySpawnManager::SpawnEnemyInternal()
 		UE_LOG(LogTemp, Warning, TEXT("EnemySpawnManager: SpawnActor failed."));
 		return false;
 	}
+
+	SpawnedEnemy->ApplySpawnEntryConfig(SelectedEntry);
 
 	++SpawnedEnemyCount;
 

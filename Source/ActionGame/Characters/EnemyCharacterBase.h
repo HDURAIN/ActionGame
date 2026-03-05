@@ -8,6 +8,7 @@
 #include "GameplayTagContainer.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayEffect.h"
+#include "ActionGameTypes.h"
 #include "EnemyCharacterBase.generated.h"
 
 class UAbilitySystemComponent;
@@ -33,6 +34,9 @@ public:
 
 	// IAbilitySystemInterface
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+
+	/** SpawnManager 生成后灌入本次生成配置（Demo 先用最小字段） */
+	void ApplySpawnEntryConfig(const FEnemySpawnEntry& InConfig);
 
 public:
 	// =========================================================================
@@ -92,11 +96,32 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Enemy|Target")
 	float InitialAcquireDelay = 0.5f;
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy|Runtime")
+	EEnemyMovementType EnemyMovementType = EEnemyMovementType::Ground;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy|Runtime")
+	float TargetAcceptanceRadius = 100.f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy|Runtime")
+	bool bUsePathfinding = true;
+
+public:
+	UFUNCTION(BlueprintPure, Category = "Enemy|Movement")
+	EEnemyMovementType GetEnemyMovementType() const { return EnemyMovementType; }
+
+	UFUNCTION(BlueprintPure, Category = "Enemy|Movement")
+	float GetTargetAcceptanceRadius() const { return TargetAcceptanceRadius; }
+
+	UFUNCTION(BlueprintPure, Category = "Enemy|Movement")
+	bool ShouldUsePathfinding() const { return bUsePathfinding; }
+
 private:
 	UPROPERTY(Transient)
 	TWeakObjectPtr<ACharacter> TargetCharacter;
 
 	FDelegateHandle DeadTagChangedHandle;
+
+	FTimerHandle ReacquireRetryHandle;
 
 private:
 	void SetTarget(ACharacter* NewTarget);
