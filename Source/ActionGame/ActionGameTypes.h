@@ -68,6 +68,18 @@ struct FAbilitySetData
 	TArray<TSubclassOf<class UGameplayAbility>> Abilities;
 };
 
+USTRUCT(BlueprintType)
+struct FEnemySpawnEntry
+{
+	GENERATED_USTRUCT_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+	TSubclassOf<ACharacter> EnemyClass;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (ClampMin = "0"))
+	int32 Weight = 1;
+};
+
 UENUM(BlueprintType)
 enum class EFoot : uint8
 {	

@@ -2,6 +2,7 @@
 
 #include "Characters/EnemyCharacterBase.h"
 
+#include "AIController.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "Engine/World.h"
@@ -21,6 +22,9 @@ AEnemyCharacterBase::AEnemyCharacterBase()
 {
 	PrimaryActorTick.bCanEverTick = true;
 	bReplicates = true;
+
+	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
+	AIControllerClass = AAIController::StaticClass(); // 或你的自定义 AIController
 
 	// =========================
 	// GAS: ASC + Enemy AttributeSet
