@@ -2,48 +2,44 @@
 
 #include "Characters/EnemyCharacterBase.h"
 
-#include "AbilitySystemComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
+#include "AbilitySystem/AttributeSets/AG_EnemyAttributeSet.h"
+
+#include "Components/CapsuleComponent.h"
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
-#include "TimerManager.h"
-#include "Components/CapsuleComponent.h"
-#include "GameplayEffectTypes.h"
-#include "ActionGameTypes.h"
-#include "GameplayEffectExtension.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "EnemyAIController.h"
-#include "AbilitySystem/AttributeSets/AG_EnemyAttributeSet.h"
-#include "ActionGameCharacter.h"
+
+#include "GameplayEffectExtension.h"
+#include "GameplayEffectTypes.h"
 
 AEnemyCharacterBase::AEnemyCharacterBase()
 {
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 	bReplicates = true;
 
-	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
-	AIControllerClass = AEnemyAIController::StaticClass(); // 或你的自定义 AIController
-
-	// =========================
-	// GAS: ASC + Enemy AttributeSet
-	// =========================
 	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 	if (AbilitySystemComponent)
 	{
 		AbilitySystemComponent->SetIsReplicated(true);
-		// Mixed 适合大多数角色（demo省心），也可按需改 Minimal
 		AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 	}
 
 	EnemyAttributeSet = CreateDefaultSubobject<UAG_EnemyAttributeSet>(TEXT("EnemyAttributeSet"));
 
-	// =========================
-	// Targeting
-	// =========================
 	DeadTag = FGameplayTag::RequestGameplayTag(TEXT("State.Dead"));
 
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(EnemyAttributeSet->GetHealthAttribute()).AddUObject(this, &AEnemyCharacterBase::OnHealthAttributeChanged);
-	AbilitySystemComponent->RegisterGameplayTagEvent(FGameplayTag::RequestGameplayTag(TEXT("State.Ragdoll"), EGameplayTagEventType::NewOrRemoved)).AddUObject(this, &AEnemyCharacterBase::OnRagdollStateTagChanged);
+	if (AbilitySystemComponent && EnemyAttributeSet)
+	{
+		AbilitySystemComponent
+			->GetGameplayAttributeValueChangeDelegate(EnemyAttributeSet->GetHealthAttribute())
+			.AddUObject(this, &AEnemyCharacterBase::OnHealthAttributeChanged);
+
+		AbilitySystemComponent->RegisterGameplayTagEvent(
+			FGameplayTag::RequestGameplayTag(TEXT("State.Ragdoll")),
+			EGameplayTagEventType::NewOrRemoved
+		).AddUObject(this, &AEnemyCharacterBase::OnRagdollStateTagChanged);
+	}
 }
 
 UAbilitySystemComponent* AEnemyCharacterBase::GetAbilitySystemComponent() const
@@ -57,14 +53,7 @@ void AEnemyCharacterBase::ApplySpawnEntryConfig(const FEnemySpawnEntry& InConfig
 	TargetAcceptanceRadius = InConfig.AcceptanceRadius;
 	bUsePathfinding = InConfig.bUsePathfinding;
 
-	// 如果当前已经有目标，配置变化后可以重下发一次 MoveTo（可选但很实用）
-	if (ACharacter* Target = TargetCharacter.Get())
-	{
-		if (AEnemyAIController* EnemyController = Cast<AEnemyAIController>(GetController()))
-		{
-			EnemyController->ChaseTarget(Target);
-		}
-	}
+	ApplyMovementTypeConfig();
 }
 
 void AEnemyCharacterBase::BeginPlay()
@@ -76,62 +65,18 @@ void AEnemyCharacterBase::BeginPlay()
 		DeadTag = FGameplayTag::RequestGameplayTag(TEXT("State.Dead"));
 	}
 
-	// Init GAS actor info: for NPC, Owner/Avatar 都是自己
 	if (AbilitySystemComponent)
 	{
 		AbilitySystemComponent->InitAbilityActorInfo(this, this);
-	}
-
-	ReacquireTarget();
-
-	// 测试用：延迟补一次（解决 BeginPlay 时序）
-	if (InitialAcquireDelay > 0.f)
-	{
-		FTimerHandle TmpHandle;
-		GetWorldTimerManager().SetTimer(
-			TmpHandle,
-			this,
-			&AEnemyCharacterBase::ReacquireTarget,
-			InitialAcquireDelay,
-			false
-		);
 	}
 
 	GiveDeathAbility();
 	ApplyStartupEffects();
 }
 
-void AEnemyCharacterBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
+ACharacter* AEnemyCharacterBase::FindBestTarget() const
 {
-	GetWorldTimerManager().ClearTimer(ReacquireRetryHandle);
-	UnbindFromTargetDeath();
-	Super::EndPlay(EndPlayReason);
-}
-
-void AEnemyCharacterBase::ReacquireTarget()
-{
-	ACharacter* NewTarget = FindNearestAliveCharacter();
-	SetTarget(NewTarget);
-
-	// 无目标：低频重试，避免“全死->复活后永远不再找”
-	if (!IsValid(NewTarget))
-	{
-		if (!GetWorldTimerManager().IsTimerActive(ReacquireRetryHandle))
-		{
-			GetWorldTimerManager().SetTimer(
-				ReacquireRetryHandle,
-				this,
-				&AEnemyCharacterBase::ReacquireTarget,
-				0.5f,
-				true
-			);
-		}
-	}
-	else
-	{
-		// 有目标：停止重试
-		GetWorldTimerManager().ClearTimer(ReacquireRetryHandle);
-	}
+	return FindNearestAliveCharacter();
 }
 
 bool AEnemyCharacterBase::IsValidTargetCandidate(ACharacter* Candidate) const
@@ -142,35 +87,6 @@ bool AEnemyCharacterBase::IsValidTargetCandidate(ACharacter* Candidate) const
 float AEnemyCharacterBase::ComputeTargetScoreSq(const ACharacter* Candidate) const
 {
 	return FVector::DistSquared(GetActorLocation(), Candidate->GetActorLocation());
-}
-
-void AEnemyCharacterBase::SetTarget(ACharacter* NewTarget)
-{
-	if (TargetCharacter.Get() == NewTarget)
-	{
-		return;
-	}
-
-	UnbindFromTargetDeath();
-	TargetCharacter = NewTarget;
-
-	if (IsValid(NewTarget))
-	{
-		BindToTargetDeath(NewTarget);
-	}
-
-	// 目标变化时驱动 AIController
-	if (AEnemyAIController* EnemyController = Cast<AEnemyAIController>(GetController()))
-	{
-		if (IsValid(NewTarget))
-		{
-			EnemyController->ChaseTarget(NewTarget);
-		}
-		else
-		{
-			EnemyController->StopChasing();
-		}
-	}
 }
 
 ACharacter* AEnemyCharacterBase::FindNearestAliveCharacter() const
@@ -186,9 +102,9 @@ ACharacter* AEnemyCharacterBase::FindNearestAliveCharacter() const
 		APlayerController* PC = It->Get();
 		if (!IsValid(PC)) continue;
 
-		APawn* Pawn = PC->GetPawn();
-		ACharacter* Candidate = Cast<ACharacter>(Pawn);
+		ACharacter* Candidate = Cast<ACharacter>(PC->GetPawn());
 		if (!IsValid(Candidate)) continue;
+
 		if (!IsValidTargetCandidate(Candidate)) continue;
 		if (IsCharacterDead(Candidate)) continue;
 
@@ -205,19 +121,15 @@ ACharacter* AEnemyCharacterBase::FindNearestAliveCharacter() const
 
 bool AEnemyCharacterBase::IsCharacterDead(const ACharacter* Character) const
 {
-	if (!IsValid(Character))
-	{
-		return true;
-	}
+	if (!IsValid(Character)) return true;
 
 	UAbilitySystemComponent* ASC = GetASC(const_cast<ACharacter*>(Character));
 	if (!ASC)
 	{
-		// 没ASC就按“活着”处理，避免误判
-		return false;
+		return false; // 没 ASC 就按“活着”处理
 	}
 
-	return ASC->HasMatchingGameplayTag(DeadTag);
+	return DeadTag.IsValid() && ASC->HasMatchingGameplayTag(DeadTag);
 }
 
 UAbilitySystemComponent* AEnemyCharacterBase::GetASC(AActor* Actor) const
@@ -225,65 +137,10 @@ UAbilitySystemComponent* AEnemyCharacterBase::GetASC(AActor* Actor) const
 	return UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Actor);
 }
 
-void AEnemyCharacterBase::BindToTargetDeath(ACharacter* Target)
-{
-	UAbilitySystemComponent* ASC = GetASC(Target);
-	if (!ASC || !DeadTag.IsValid())
-	{
-		return;
-	}
-
-	if (ASC->HasMatchingGameplayTag(DeadTag))
-	{
-		OnTargetDeadTagChanged(DeadTag, 1);
-		return;
-	}
-
-	DeadTagChangedHandle =
-		ASC->RegisterGameplayTagEvent(DeadTag, EGameplayTagEventType::NewOrRemoved)
-		.AddUObject(this, &AEnemyCharacterBase::OnTargetDeadTagChanged);
-}
-
-void AEnemyCharacterBase::UnbindFromTargetDeath()
-{
-	ACharacter* OldTarget = TargetCharacter.Get();
-	if (!IsValid(OldTarget))
-	{
-		DeadTagChangedHandle.Reset();
-		return;
-	}
-
-	UAbilitySystemComponent* ASC = GetASC(OldTarget);
-	if (!ASC || !DeadTagChangedHandle.IsValid() || !DeadTag.IsValid())
-	{
-		DeadTagChangedHandle.Reset();
-		return;
-	}
-
-	ASC->RegisterGameplayTagEvent(DeadTag, EGameplayTagEventType::NewOrRemoved)
-		.Remove(DeadTagChangedHandle);
-
-	DeadTagChangedHandle.Reset();
-}
-
-void AEnemyCharacterBase::OnTargetDeadTagChanged(const FGameplayTag Tag, int32 NewCount)
-{
-	if (Tag == DeadTag && NewCount > 0)
-	{
-		ReacquireTarget();
-	}
-}
-
 void AEnemyCharacterBase::GiveDeathAbility()
 {
-	if (!AbilitySystemComponent || !DeathAbilityClass)
-	{
-		return;
-	}
-	if (!HasAuthority())
-	{
-		return;
-	}
+	if (!HasAuthority()) return;
+	if (!AbilitySystemComponent || !DeathAbilityClass) return;
 
 	AbilitySystemComponent->GiveAbility(FGameplayAbilitySpec(DeathAbilityClass, 1));
 }
@@ -308,26 +165,51 @@ void AEnemyCharacterBase::ApplyStartupEffects()
 	}
 }
 
-void AEnemyCharacterBase::OnHealthAttributeChanged(const FOnAttributeChangeData& Data)
+void AEnemyCharacterBase::ApplyMovementTypeConfig()
 {
-	if (Data.NewValue <= 0.f && Data.OldValue > 0.f)
+	UCharacterMovementComponent* MoveComp = GetCharacterMovement();
+	if (!MoveComp)
 	{
-		AActionGameCharacter* OtherCharacter = nullptr;
+		return;
+	}
 
-		if (Data.GEModData)
-		{
-			const FGameplayEffectContextHandle& EffectContext = Data.GEModData->EffectSpec.GetEffectContext();
-			OtherCharacter = Cast<AActionGameCharacter>(EffectContext.GetInstigator());
-		}
-
-		FGameplayEventData EventPayload;
-		EventPayload.EventTag = ZeroHealthEventTag;
-		EventPayload.Instigator = OtherCharacter;
-		UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, ZeroHealthEventTag, EventPayload);
+	if (EnemyMovementType == EEnemyMovementType::Flying)
+	{
+		MoveComp->SetMovementMode(MOVE_Flying);
+		MoveComp->GravityScale = 0.f;
+	}
+	else
+	{
+		MoveComp->SetMovementMode(MOVE_Walking);
+		MoveComp->GravityScale = 1.f;
 	}
 }
 
-void  AEnemyCharacterBase::OnRagdollStateTagChanged(const FGameplayTag CallbackTag, int32 NewCount)
+void AEnemyCharacterBase::OnHealthAttributeChanged(const FOnAttributeChangeData& Data)
+{
+	if (Data.NewValue > 0.f || Data.OldValue <= 0.f)
+	{
+		return;
+	}
+
+	AActor* InstigatorActor = nullptr;
+
+	if (Data.GEModData)
+	{
+		const FGameplayEffectContextHandle EffectContext = Data.GEModData->EffectSpec.GetEffectContext();
+		InstigatorActor = EffectContext.GetInstigator();
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("%s health changed to zero or below, instigator: %s"), *GetName(), InstigatorActor ? *InstigatorActor->GetName() : TEXT("None"));
+
+	FGameplayEventData Payload;
+	Payload.EventTag = ZeroHealthEventTag;
+	Payload.Instigator = InstigatorActor;
+
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, ZeroHealthEventTag, Payload);
+}
+
+void AEnemyCharacterBase::OnRagdollStateTagChanged(const FGameplayTag CallbackTag, int32 NewCount)
 {
 	if (NewCount > 0)
 	{
@@ -335,7 +217,7 @@ void  AEnemyCharacterBase::OnRagdollStateTagChanged(const FGameplayTag CallbackT
 	}
 }
 
-void  AEnemyCharacterBase::StartRagdoll()
+void AEnemyCharacterBase::StartRagdoll()
 {
 	if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
 	{
@@ -352,10 +234,15 @@ void  AEnemyCharacterBase::StartRagdoll()
 		SkeletalMesh->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 		SkeletalMesh->SetSimulatePhysics(true);
 		SkeletalMesh->SetEnableGravity(true);
-		SkeletalMesh->SetAllPhysicsLinearVelocity(FVector::Zero());
-		SkeletalMesh->SetAllPhysicsAngularVelocityInDegrees(FVector::Zero());
+		SkeletalMesh->SetAllPhysicsLinearVelocity(FVector::ZeroVector);
+		SkeletalMesh->SetAllPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
 		SkeletalMesh->WakeAllRigidBodies();
-		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+		if (UCapsuleComponent* Capsule = GetCapsuleComponent())
+		{
+			Capsule->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+		}
 	}
+
 	SetLifeSpan(3.f);
 }

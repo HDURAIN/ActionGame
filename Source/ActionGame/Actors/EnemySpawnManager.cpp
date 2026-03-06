@@ -3,6 +3,7 @@
 #include "Characters/EnemyCharacterBase.h"
 #include "Engine/World.h"
 #include "GameFramework/Actor.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "TimerManager.h"
 
 AEnemySpawnManager::AEnemySpawnManager()
@@ -288,11 +289,18 @@ bool AEnemySpawnManager::SpawnEnemyInternal()
 		return false;
 	}
 
+	if (SpawnedEnemy->HasAuthority())
+	{
+		// 先确保有 Controller（BT 才能跑）
+		if (SpawnedEnemy->GetController() == nullptr)
+		{
+			SpawnedEnemy->SpawnDefaultController();
+		}
+	}
+
+	// 灌入本次 Entry 配置（BTTask 会读这里的参数）
 	SpawnedEnemy->ApplySpawnEntryConfig(SelectedEntry);
-
 	++SpawnedEnemyCount;
-
-	UE_LOG(LogTemp, Log, TEXT("EnemySpawnManager: Spawned enemy. Count = %d"), SpawnedEnemyCount);
 
 	return true;
 }

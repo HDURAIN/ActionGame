@@ -1,6 +1,6 @@
 #include "Characters/EnemyGroundShooterCharacter.h"
-
 #include "GameFramework/CharacterMovementComponent.h"
+#include "AbilitySystem/AttributeSets/AG_EnemyAttributeSet.h"
 
 AEnemyGroundShooterCharacter::AEnemyGroundShooterCharacter()
 {
@@ -11,6 +11,9 @@ AEnemyGroundShooterCharacter::AEnemyGroundShooterCharacter()
 void AEnemyGroundShooterCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+	UE_LOG(LogTemp, Warning, TEXT("Enemy %s Health=%.1f"),
+		*GetName(), EnemyAttributeSet ? EnemyAttributeSet->GetHealth() : -1.f);
 
 	if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
 	{

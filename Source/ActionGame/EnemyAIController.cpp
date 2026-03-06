@@ -1,49 +1,61 @@
 #include "EnemyAIController.h"
-#include "AITypes.h"
-#include "Navigation/PathFollowingComponent.h"
-#include "Characters/EnemyCharacterBase.h"
 
-void AEnemyAIController::ChaseTarget(AActor* TargetActor)
+#include "BehaviorTree/BehaviorTree.h"
+#include "BehaviorTree/BehaviorTreeComponent.h"
+#include "BehaviorTree/BlackboardComponent.h"
+
+AEnemyAIController::AEnemyAIController()
 {
-	if (!IsValid(TargetActor))
-	{
-		StopChasing();
-		return;
-	}
-
-	MoveToTarget_Internal(TargetActor);
+	BlackboardComp = CreateDefaultSubobject<UBlackboardComponent>(TEXT("BlackboardComp"));
+	BehaviorComp = CreateDefaultSubobject<UBehaviorTreeComponent>(TEXT("BehaviorComp"));
 }
 
-void AEnemyAIController::StopChasing()
+void AEnemyAIController::OnPossess(APawn* InPawn)
 {
-	StopMovement();
+	Super::OnPossess(InPawn);
+
+	if (!DefaultBehaviorTree)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EnemyAIController: DefaultBehaviorTree is null (set BT_Enemy in blueprint/defaults)."));
+		return;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("EnemyAIController OnPossess: %s  BT=%s"),
+		*GetNameSafe(InPawn),
+		*GetNameSafe(DefaultBehaviorTree));
+
+	UBlackboardData* BBAsset = DefaultBehaviorTree->BlackboardAsset;
+	if (!BBAsset)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EnemyAIController: BehaviorTree has no BlackboardAsset."));
+		return;
+	}
+
+	// UseBlackboard 需要 UBlackboardComponent*&
+	UBlackboardComponent* BBPtr = BlackboardComp;
+	if (!UseBlackboard(BBAsset, BBPtr))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EnemyAIController: UseBlackboard failed."));
+		return;
+	}
+	BlackboardComp = BBPtr;
+
+	// 运行 BT
+	if (!RunBehaviorTree(DefaultBehaviorTree))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("EnemyAIController: RunBehaviorTree failed."));
+		return;
+	}
+
+	UE_LOG(LogTemp, Log, TEXT("EnemyAIController: Running BT %s"), *DefaultBehaviorTree->GetName());
 }
 
-void AEnemyAIController::MoveToTarget_Internal(AActor* TargetActor)
+void AEnemyAIController::OnUnPossess()
 {
-	if (!IsValid(TargetActor))
+	if (BehaviorComp)
 	{
-		return;
+		BehaviorComp->StopTree(EBTStopMode::Safe);
 	}
 
-	const AEnemyCharacterBase* Enemy = Cast<AEnemyCharacterBase>(GetPawn());
-	if (!IsValid(Enemy))
-	{
-		UE_LOG(LogTemp, Warning, TEXT("EnemyAIController: Controlled Pawn is not AEnemyCharacterBase."));
-		return;
-	}
-
-	FAIMoveRequest MoveRequest;
-	MoveRequest.SetGoalActor(TargetActor);
-	MoveRequest.SetAcceptanceRadius(Enemy->GetTargetAcceptanceRadius());
-	MoveRequest.SetUsePathfinding(Enemy->ShouldUsePathfinding());
-	MoveRequest.SetAllowPartialPath(true);
-	MoveRequest.SetProjectGoalLocation(Enemy->ShouldUsePathfinding());
-
-	EPathFollowingRequestResult::Type Result = MoveTo(MoveRequest);
-	UE_LOG(LogTemp, Verbose, TEXT("EnemyAIController MoveTo result=%d UsePath=%d Radius=%.1f Target=%s"),
-		(int32)Result,
-		Enemy->ShouldUsePathfinding() ? 1 : 0,
-		Enemy->GetTargetAcceptanceRadius(),
-		*GetNameSafe(TargetActor));
+	Super::OnUnPossess();
 }
