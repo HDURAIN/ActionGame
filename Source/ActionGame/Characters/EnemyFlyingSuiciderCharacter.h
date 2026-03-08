@@ -15,6 +15,8 @@ class ACTIONGAME_API AEnemyFlyingSuiciderCharacter : public AEnemyCharacterBase
 public:
 	AEnemyFlyingSuiciderCharacter();
 
+	virtual void PerformAttack(AActor* TargetActor) override;
+
 protected:
 	virtual void BeginPlay() override;
 

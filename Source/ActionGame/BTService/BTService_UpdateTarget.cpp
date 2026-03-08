@@ -41,4 +41,17 @@ void UBTService_UpdateTarget::TickNode(UBehaviorTreeComponent& OwnerComp, uint8*
 	AActor* TargetActor = Enemy->FindBestTarget();
 
 	BB->SetValueAsObject(GetSelectedBlackboardKey(), TargetActor);
+	BB->SetValueAsBool(TEXT("CanAttack"), Enemy->CanAttack());
+
+
+	bool bInRange = false;
+	if (IsValid(TargetActor))
+	{
+		const float DistSq = FVector::DistSquared(Enemy->GetActorLocation(), TargetActor->GetActorLocation());
+		const float R = FMath::Max(0.f, Enemy->GetAttackRange());
+		bInRange = DistSq <= FMath::Square(R);
+	}
+	BB->SetValueAsBool(TEXT("InAttackRange"), bInRange);
+
+	BB->SetValueAsFloat(TEXT("AttackCooldown"), FMath::Max(0.05f, Enemy->GetAttackCooldown()));
 }

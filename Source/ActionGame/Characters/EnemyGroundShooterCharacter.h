@@ -12,6 +12,8 @@ class ACTIONGAME_API AEnemyGroundShooterCharacter : public AEnemyCharacterBase
 public:
 	AEnemyGroundShooterCharacter();
 
+	virtual void PerformAttack(AActor* TargetActor) override;
+
 protected:
 	virtual void BeginPlay() override;
 

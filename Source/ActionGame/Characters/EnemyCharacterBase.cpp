@@ -12,6 +12,7 @@
 
 #include "GameplayEffectExtension.h"
 #include "GameplayEffectTypes.h"
+#include <BehaviorTree/Decorators/BTDecorator_ConditionalLoop.h>
 
 AEnemyCharacterBase::AEnemyCharacterBase()
 {
@@ -47,11 +48,19 @@ UAbilitySystemComponent* AEnemyCharacterBase::GetAbilitySystemComponent() const
 	return AbilitySystemComponent;
 }
 
+void AEnemyCharacterBase::PerformAttack(AActor* TargetActor)
+{
+	// Base default: do nothing.
+}
+
 void AEnemyCharacterBase::ApplySpawnEntryConfig(const FEnemySpawnEntry& InConfig)
 {
 	EnemyMovementType = InConfig.MovementType;
 	TargetAcceptanceRadius = InConfig.AcceptanceRadius;
 	bUsePathfinding = InConfig.bUsePathfinding;
+	AttackRange = InConfig.AttackRange;
+	AttackCooldown = InConfig.AttackCooldown;
+	bCanAttack = InConfig.bCanAttack;
 
 	ApplyMovementTypeConfig();
 }

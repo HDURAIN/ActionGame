@@ -29,6 +29,11 @@ AEnemyFlyingSuiciderCharacter::AEnemyFlyingSuiciderCharacter()
 	);
 }
 
+void AEnemyFlyingSuiciderCharacter::PerformAttack(AActor* TargetActor)
+{
+	// Do nothing, just wait for overlap event to trigger explosion.
+}
+
 void AEnemyFlyingSuiciderCharacter::BeginPlay()
 {
 	Super::BeginPlay();

@@ -105,6 +105,17 @@ struct FEnemySpawnEntry
 	/** 是否启用寻路 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
 	bool bUsePathfinding = true;
+
+	/** 进入攻击状态的距离（<= 就打） */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat", meta = (ClampMin = "0.0"))
+	float AttackRange = 150.f;
+
+	/** 攻击间隔（秒） */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat", meta = (ClampMin = "0.01"))
+	float AttackCooldown = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
+	bool bCanAttack = true;
 };
 
 UENUM(BlueprintType)

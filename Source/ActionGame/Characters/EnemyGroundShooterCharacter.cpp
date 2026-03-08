@@ -8,6 +8,12 @@ AEnemyGroundShooterCharacter::AEnemyGroundShooterCharacter()
 	bUseControllerRotationYaw = false;
 }
 
+void AEnemyGroundShooterCharacter::PerformAttack(AActor* TargetActor)
+{
+	if (!HasAuthority() || !IsValid(TargetActor)) return;
+
+}
+
 void AEnemyGroundShooterCharacter::BeginPlay()
 {
 	Super::BeginPlay();
