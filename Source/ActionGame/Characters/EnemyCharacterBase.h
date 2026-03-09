@@ -140,6 +140,7 @@ private:
 
 	void GiveDeathAbility();
 	void ApplyStartupEffects();
-	void ApplyMovementTypeConfig();
-	void ApplyInitAttributesFromConfig();
+	void ApplyRuntimeConfig();	
+	void ApplyInitAttributes();
+	void InitializeEnemy();
 };
