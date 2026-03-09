@@ -2,10 +2,10 @@
 
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
+#include "Characters/EnemyCharacterBase.h"
 #include "Components/SphereComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "GameplayEffect.h"
-#include "Engine/World.h"
 
 AEnemyProjectile::AEnemyProjectile()
 {
@@ -14,34 +14,30 @@ AEnemyProjectile::AEnemyProjectile()
 	bReplicates = true;
 	SetReplicateMovement(true);
 
-	// ===== Collision =====
 	CollisionComp = CreateDefaultSubobject<USphereComponent>(TEXT("CollisionComp"));
 	SetRootComponent(CollisionComp);
 
 	CollisionComp->InitSphereRadius(SphereRadius);
-	CollisionComp->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+	CollisionComp->SetCollisionEnabled(ECollisionEnabled::QueryOnly);
 	CollisionComp->SetCollisionObjectType(ECC_WorldDynamic);
 
-	// Block WorldStatic/WorldDynamic，Overlap Pawn
-	CollisionComp->SetCollisionResponseToAllChannels(ECR_Block);
-	CollisionComp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
+	CollisionComp->SetCollisionResponseToAllChannels(ECR_Ignore);
+	CollisionComp->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
+	CollisionComp->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Block);
+	CollisionComp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 
-	CollisionComp->SetNotifyRigidBodyCollision(true); // 触发 Hit
-	CollisionComp->SetGenerateOverlapEvents(false);
+	CollisionComp->SetNotifyRigidBodyCollision(false);
+	CollisionComp->SetGenerateOverlapEvents(true);
 
 	CollisionComp->OnComponentHit.AddDynamic(this, &AEnemyProjectile::OnProjectileHit);
+	CollisionComp->OnComponentBeginOverlap.AddDynamic(this, &AEnemyProjectile::OnProjectileBeginOverlap);
 
-	// ===== Movement =====
 	MovementComp = CreateDefaultSubobject<UProjectileMovementComponent>(TEXT("MovementComp"));
 	MovementComp->UpdatedComponent = CollisionComp;
-
 	MovementComp->InitialSpeed = 2000.f;
 	MovementComp->MaxSpeed = 2000.f;
-
 	MovementComp->bRotationFollowsVelocity = true;
 	MovementComp->bShouldBounce = false;
-
-	// 网络：服务器驱动即可，客户端看复制位置
 }
 
 void AEnemyProjectile::BeginPlay()
@@ -60,7 +56,6 @@ void AEnemyProjectile::BeginPlay()
 		}
 	}
 
-	// 防止飞丢
 	SetLifeSpan(LifeSeconds);
 }
 
@@ -81,7 +76,6 @@ void AEnemyProjectile::InitProjectile(
 	{
 		const float FinalSpeed = (Speed > 0.f) ? Speed : MovementComp->InitialSpeed;
 		MovementComp->Velocity = Dir.GetSafeNormal() * FinalSpeed;
-
 		MovementComp->InitialSpeed = FinalSpeed;
 		MovementComp->MaxSpeed = FinalSpeed;
 	}
@@ -94,11 +88,31 @@ void AEnemyProjectile::OnProjectileHit(
 	FVector NormalImpulse,
 	const FHitResult& Hit)
 {
-	// 只在服务器结算伤害（权威）
 	if (HasAuthority())
 	{
 		ApplyDamageIfPossible(Hit);
 	}
+
+	if (bDestroyOnHit)
+	{
+		Destroy();
+	}
+}
+
+void AEnemyProjectile::OnProjectileBeginOverlap(
+	UPrimitiveComponent* OverlappedComp,
+	AActor* OtherActor,
+	UPrimitiveComponent* OtherComp,
+	int32 OtherBodyIndex,
+	bool bFromSweep,
+	const FHitResult& SweepResult)
+{
+	if (!HasAuthority() || !IsValid(OtherActor) || ShouldIgnoreTargetActor(OtherActor))
+	{
+		return;
+	}
+
+	ApplyDamageIfPossible(SweepResult);
 
 	if (bDestroyOnHit)
 	{
@@ -114,36 +128,49 @@ void AEnemyProjectile::ApplyDamageIfPossible(const FHitResult& Hit)
 	}
 
 	AActor* TargetActor = Hit.GetActor();
-	if (!IsValid(TargetActor))
+	if (!IsValid(TargetActor) || ShouldIgnoreTargetActor(TargetActor))
 	{
 		return;
 	}
 
-	// 目标必须有 ASC 才能吃 GE
-	UAbilitySystemComponent* TargetASC =
-		UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor);
-
+	UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor);
 	if (!TargetASC)
 	{
 		return;
 	}
 
-	// 构造 Context
 	FGameplayEffectContextHandle Context = SourceASC->MakeEffectContext();
 	Context.AddSourceObject(this);
 	Context.AddHitResult(Hit);
 
-	// Spec
-	FGameplayEffectSpecHandle SpecHandle =
-		SourceASC->MakeOutgoingSpec(DamageEffectClass, 1.f, Context);
-
+	FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(DamageEffectClass, 1.f, Context);
 	if (!SpecHandle.IsValid())
 	{
 		return;
 	}
 
-	// 对齐你现在的扣血写法：SetByCaller 传负数
 	SpecHandle.Data->SetSetByCallerMagnitude(DamageDataTag, -DamageValue);
-
 	SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
+}
+
+bool AEnemyProjectile::ShouldIgnoreTargetActor(const AActor* TargetActor) const
+{
+	if (!IsValid(TargetActor))
+	{
+		return true;
+	}
+
+	if (TargetActor == this || TargetActor == GetOwner() || TargetActor == GetInstigator())
+	{
+		return true;
+	}
+
+	const AEnemyCharacterBase* TargetEnemy = Cast<AEnemyCharacterBase>(TargetActor);
+	const AEnemyCharacterBase* OwnerEnemy = Cast<AEnemyCharacterBase>(GetOwner());
+	if (TargetEnemy && OwnerEnemy)
+	{
+		return true;
+	}
+
+	return false;
 }

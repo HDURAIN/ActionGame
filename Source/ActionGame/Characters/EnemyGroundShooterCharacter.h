@@ -49,6 +49,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy|Attack", meta = (ClampMin = "0.0"))
 	float ProjectileSpeed = 2000.f;
 
+	/** Forward offset at spawn to avoid face-to-face overlap push */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy|Attack", meta = (ClampMin = "0.0"))
+	float ProjectileSpawnForwardOffset = 20.f;
+
 	/** 目标瞄准高度系数：0=脚底，0.5=胸口，1=头顶附近（按胶囊半高插值） */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Enemy|Attack", meta = (ClampMin = "0.0", ClampMax = "1.0"))
 	float AimHeightAlpha = 0.5f;
@@ -57,3 +61,4 @@ protected:
 	FVector GetAimPoint(AActor* TargetActor) const;
 	bool ComputeShotDir(AActor* TargetActor, FVector& OutDir, FVector& OutMuzzleLoc) const;
 };
+

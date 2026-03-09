@@ -36,6 +36,9 @@ EBTNodeResult::Type UBTTask_Attack::ExecuteTask(UBehaviorTreeComponent& OwnerCom
 		return EBTNodeResult::Failed;
 	}
 
+	// 进入攻击行为时先设置焦点；持续维持由 Service 负责
+	AIC->SetFocus(TargetActor, EAIFocusPriority::Gameplay);
+
 	// 触发一次攻击（由子类实现：地面射击/近战/自爆等）
 	Enemy->PerformAttack(TargetActor);
 

@@ -6,16 +6,41 @@
 #include "GameFramework/Controller.h"
 #include "GameFramework/Pawn.h"
 #include "GameFramework/PlayerController.h"
+#include "ActionGameGameState.h"
 
 AActionGameGameMode::AActionGameGameMode()
 {
+	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bStartWithTickEnabled = true;
+
+	GameStateClass = AActionGameGameState::StaticClass();
 }
 
 void AActionGameGameMode::BeginPlay()
 {
 	Super::BeginPlay();
 
-	UE_LOG(LogTemp, Warning, TEXT("AActionGameGameMode::BeginPlay"));
+	SurvivalStartTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.f;
+	LastSyncedElapsedTime = -1.f;
+	SurvivalTimeSyncAccumulator = 0.f;
+
+	UpdateSurvivalDifficultyState();
+
+	UE_LOG(LogTemp, Warning, TEXT("AActionGameGameMode::BeginPlay - SurvivalStartTime=%.2f"), SurvivalStartTime);
+}
+
+void AActionGameGameMode::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+
+	SurvivalTimeSyncAccumulator += DeltaSeconds;
+
+	const float SafeSyncInterval = FMath::Max(0.05f, SurvivalTimeSyncInterval);
+	if (SurvivalTimeSyncAccumulator >= SafeSyncInterval)
+	{
+		SurvivalTimeSyncAccumulator = 0.f;
+		UpdateSurvivalDifficultyState();
+	}
 }
 
 void AActionGameGameMode::PostLogin(APlayerController* NewPlayer)
@@ -185,4 +210,36 @@ void AActionGameGameMode::RefreshSpawnManagerForController(AController* InContro
 	UE_LOG(LogTemp, Warning, TEXT("ActionGameGameMode: SpawnManager %s now focuses %s"),
 		*SpawnManager->GetName(),
 		*Pawn->GetName());
+}
+
+AActionGameGameState* AActionGameGameMode::GetActionGameGameState() const
+{
+	return GetGameState<AActionGameGameState>();
+}
+
+void AActionGameGameMode::UpdateSurvivalDifficultyState()
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	AActionGameGameState* AGGameState = GetActionGameGameState();
+	if (!AGGameState)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("ActionGameGameMode: GameState is not AActionGameGameState."));
+		return;
+	}
+
+	const float CurrentTime = World->GetTimeSeconds();
+	const float ElapsedSurvivalTime = FMath::Max(0.f, CurrentTime - SurvivalStartTime);
+
+	if (FMath::IsNearlyEqual(ElapsedSurvivalTime, LastSyncedElapsedTime, KINDA_SMALL_NUMBER))
+	{
+		return;
+	}
+
+	AGGameState->SetElapsedSurvivalTime(ElapsedSurvivalTime);
+	LastSyncedElapsedTime = ElapsedSurvivalTime;
 }

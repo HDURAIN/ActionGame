@@ -5,6 +5,7 @@
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "Engine/World.h"
+#include "AbilitySystem/AttributeSets/AG_EnemyAttributeSet.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 AEnemyGroundShooterCharacter::AEnemyGroundShooterCharacter()
@@ -70,51 +71,72 @@ void AEnemyGroundShooterCharacter::PerformAttack(AActor* TargetActor)
 	UAbilitySystemComponent* SourceASC = GetAbilitySystemComponent();
 	if (!SourceASC)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[%s] PerformAttack failed: SourceASC is null"), *GetName());
 		return;
 	}
 
 	if (!DamageEffectClass || !DamageDataTag.IsValid())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[%s] Missing DamageEffectClass or DamageDataTag"), *GetName());
+		UE_LOG(LogTemp, Warning, TEXT("[%s] PerformAttack failed: Missing DamageEffectClass or DamageDataTag"), *GetName());
 		return;
 	}
 
 	if (!ProjectileClass)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[%s] ProjectileClass is null (set in BP defaults)"), *GetName());
+		UE_LOG(LogTemp, Warning, TEXT("[%s] PerformAttack failed: ProjectileClass is null"), *GetName());
 		return;
 	}
-
-	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("[%s] PerformAttack to %s"), *GetName(), *GetNameSafe(TargetActor)));
 
 	// 2) 计算方向 & 枪口位置
 	FVector ShotDir = FVector::ZeroVector;
 	FVector MuzzleLoc = FVector::ZeroVector;
 	if (!ComputeShotDir(TargetActor, ShotDir, MuzzleLoc))
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[%s] PerformAttack failed: ComputeShotDir failed for target %s"),
+			*GetName(), *GetNameSafe(TargetActor));
 		return;
 	}
 
-	// 3) 计算最终伤害（你之后可乘难度、暴击等）
-	const float FinalDamage = FMath::Max(0.f, BaseAttackPower);
+	// 3) 从 AttributeSet 读取攻击属性并计算最终伤害
+	const UAG_EnemyAttributeSet* EnemyAS = SourceASC->GetSet<UAG_EnemyAttributeSet>();
+	if (!EnemyAS)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[%s] PerformAttack failed: UAG_EnemyAttributeSet is null"), *GetName());
+		return;
+	}
+
+	const float AttackPower = EnemyAS->GetAttackPower();
+	const float AttackMultiplier = EnemyAS->GetAttackMultiplier();
+	const float FinalDamage = FMath::Max(0.f, AttackPower * AttackMultiplier);
+
+	if (FinalDamage <= 0.f)
+	{
+		UE_LOG(LogTemp, Warning,
+			TEXT("[%s] PerformAttack warning: FinalDamage <= 0 (AP=%.2f Mul=%.2f)"),
+			*GetName(),
+			AttackPower,
+			AttackMultiplier);
+	}
 
 	// 4) Spawn projectile（服务器权威）
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.Owner = this;
 	SpawnParams.Instigator = this;
-	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
+	const FVector SpawnLoc = MuzzleLoc + ShotDir * FMath::Max(0.f, ProjectileSpawnForwardOffset);
 	const FRotator SpawnRot = ShotDir.Rotation();
 
 	AEnemyProjectile* Proj = GetWorld()->SpawnActor<AEnemyProjectile>(
 		ProjectileClass,
-		MuzzleLoc,
+		SpawnLoc,
 		SpawnRot,
 		SpawnParams
 	);
 
 	if (!Proj)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[%s] PerformAttack failed: Spawn projectile failed"), *GetName());
 		return;
 	}
 
@@ -128,8 +150,16 @@ void AEnemyGroundShooterCharacter::PerformAttack(AActor* TargetActor)
 		ProjectileSpeed
 	);
 
-	// 可选：Debug
-	UE_LOG(LogTemp, Warning, TEXT("[%s] Fire projectile to %s dmg=%.1f"), *GetName(), *GetNameSafe(TargetActor), FinalDamage);
+	UE_LOG(LogTemp, Log,
+		TEXT("[%s] Fire projectile -> Target=%s | AP=%.2f Mul=%.2f FinalDamage=%.2f | Muzzle=%s Dir=%s Speed=%.1f"),
+		*GetName(),
+		*GetNameSafe(TargetActor),
+		AttackPower,
+		AttackMultiplier,
+		FinalDamage,
+		*MuzzleLoc.ToCompactString(),
+		*ShotDir.ToCompactString(),
+		ProjectileSpeed);
 }
 
 void AEnemyGroundShooterCharacter::BeginPlay()
@@ -148,3 +178,4 @@ void AEnemyGroundShooterCharacter::BeginPlay()
 		MoveComp->RotationRate = FRotator(0.f, TurnRateYaw, 0.f);
 	}
 }
+

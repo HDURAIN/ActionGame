@@ -26,7 +26,7 @@ public:
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
-	void ApplySpawnEntryConfig(const FEnemySpawnEntry& InConfig);
+	int32 GetCurrentDifficultyStage() const;
 
 	/** BT Service 调用：选择目标 */
 	UFUNCTION(BlueprintCallable, Category = "Enemy|Target")
@@ -102,9 +102,6 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy|Runtime")
 	bool bCanAttack = true;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy|Runtime")
-	float BaseAttackPower = 10.0f;
-
 	UPROPERTY(Transient)
 	TObjectPtr<UEnemyConfigDataAsset> EnemyConfig;
 
@@ -140,6 +137,7 @@ private:
 
 	void GiveDeathAbility();
 	void ApplyStartupEffects();
-	void ApplyMovementTypeConfig();
-	void ApplyInitAttributesFromConfig();
+	void ApplyRuntimeConfig();	
+	void ApplyInitAttributes();
+	void InitializeEnemy();
 };

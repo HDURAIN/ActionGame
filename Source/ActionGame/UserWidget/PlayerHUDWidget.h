@@ -1,53 +1,93 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "ActionGameTypes.h"
 #include "PlayerHUDWidget.generated.h"
 
 class UAbilitySystemComponent;
 class UProgressBar;
 class UTextBlock;
+class AActionGameGameState;
 struct FOnAttributeChangeData;
-/**
- * 
- */
+
 UCLASS()
 class ACTIONGAME_API UPlayerHUDWidget : public UUserWidget
 {
 	GENERATED_BODY()
 
 public:
-	// Called by PlayerController after possess
+	/** Called by PlayerController after possess */
 	void InitWithASC(UAbilitySystemComponent* InASC);
 
 protected:
-
+	// =========================
+	// Widget Lifecycle
+	// =========================
+	virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
 	virtual void NativeDestruct() override;
 
+protected:
+	// =========================
+	// BindWidget
+	// =========================
 	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
-	TObjectPtr<UProgressBar> ProgressBar_Health;
+	TObjectPtr<UProgressBar> ProgressBar_Health = nullptr;
 
 	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
-	TObjectPtr<UTextBlock> Text_Gold;
+	TObjectPtr<UTextBlock> Text_Gold = nullptr;
 
-private: // GAS
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+	TObjectPtr<UTextBlock> Text_GameTime = nullptr;
 
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+	TObjectPtr<UTextBlock> Text_Stage = nullptr;
+
+private:
+	// =========================
+	// Cached References / State
+	// =========================
 	UPROPERTY()
-	UAbilitySystemComponent* ASC = nullptr;
+	TObjectPtr<UAbilitySystemComponent> ASC = nullptr;
 
 	float CachedMaxHealth = 0.f;
-	
-	/* ===== Attribute Callbacks ===== */
+
+private:
+	// =========================
+	// ASC Binding
+	// =========================
+	void BindAttributeDelegates();
+	void UnbindAttributeDelegates();
+
+private:
+	// =========================
+	// Attribute Change Callbacks
+	// =========================
 	void OnHealthChanged(const FOnAttributeChangeData& Data);
 	void OnMaxHealthChanged(const FOnAttributeChangeData& Data);
 	void OnGoldChanged(const FOnAttributeChangeData& Data);
 
+private:
+	// =========================
+	// UI Refresh - Player Attributes
+	// =========================
+	void RefreshInitialAttributeUI();
 	void RefreshHealthBar(float Health);
 	void RefreshGold(float Gold);
 
-	void BindAttributeDelegates();
-	void UnbindAttributeDelegates();
+private:
+	// =========================
+	// UI Refresh - GameState
+	// =========================
+	void RefreshGameTime(float ElapsedSeconds);
+	void RefreshStage(int32 Stage);
+	void RefreshGameStateSection();
+
+private:
+	// =========================
+	// Helpers
+	// =========================
+	AActionGameGameState* GetActionGameGameState() const;
+	float GetCurrentHealth() const;
+	float GetCurrentMaxHealth() const;
+	float GetCurrentGold() const;
 };
