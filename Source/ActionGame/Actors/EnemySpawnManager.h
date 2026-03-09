@@ -88,6 +88,7 @@ private:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawn", meta = (AllowPrivateAccess = "true"))
 	float SpawnHeightOffset = 0.0f;
 
+	// 各类型Enemy生成配置表
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawn", meta = (AllowPrivateAccess = "true"))
 	TArray<FEnemySpawnEntry> EnemySpawnTable;
 

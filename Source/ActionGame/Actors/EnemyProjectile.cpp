@@ -48,6 +48,18 @@ void AEnemyProjectile::BeginPlay()
 {
 	Super::BeginPlay();
 
+	if (CollisionComp)
+	{
+		if (AActor* Inst = GetInstigator())
+		{
+			CollisionComp->IgnoreActorWhenMoving(Inst, true);
+		}
+		if (AActor* Ow = GetOwner())
+		{
+			CollisionComp->IgnoreActorWhenMoving(Ow, true);
+		}
+	}
+
 	// 防止飞丢
 	SetLifeSpan(LifeSeconds);
 }
@@ -116,7 +128,7 @@ void AEnemyProjectile::ApplyDamageIfPossible(const FHitResult& Hit)
 		return;
 	}
 
-	// 构造 Context（对齐你玩家射击：AddSourceObject + AddHitResult）
+	// 构造 Context
 	FGameplayEffectContextHandle Context = SourceASC->MakeEffectContext();
 	Context.AddSourceObject(this);
 	Context.AddHitResult(Hit);

@@ -4,6 +4,7 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Navigation/PathFollowingComponent.h"
 #include "Characters/EnemyCharacterBase.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 UBTTask_MoveToTargetFromConfig::UBTTask_MoveToTargetFromConfig()
 {
@@ -43,7 +44,7 @@ EBTNodeResult::Type UBTTask_MoveToTargetFromConfig::ExecuteTask(UBehaviorTreeCom
 	Req.SetGoalActor(TargetActor);
 	Req.SetAcceptanceRadius(Enemy->GetTargetAcceptanceRadius());
 	Req.SetUsePathfinding(bUsePath);
-	Req.SetProjectGoalLocation(bUsePath);   // 飞行怪 false，地面怪 true
+	Req.SetProjectGoalLocation(bUsePath);
 	Req.SetAllowPartialPath(true);
 
 	const EPathFollowingRequestResult::Type Result = AIC->MoveTo(Req);
@@ -85,7 +86,7 @@ void UBTTask_MoveToTargetFromConfig::TickTask(UBehaviorTreeComponent& OwnerComp,
 		return;
 	}
 
-	// 2) （可选）当目标离开“接受半径+滞回”时，重新发一次 MoveTo，保证持续追踪
+	// 2) 当目标离开“接受半径+滞回”时，重新发一次 MoveTo，保证持续追踪
 	//    这能解决“追到就停住、目标又跑远”的情况，且不用 BT Decorator 抖动。
 	const float R = FMath::Max(0.f, Enemy->GetTargetAcceptanceRadius());
 	const float LeaveRadius = R + ExtraLeaveRadius;

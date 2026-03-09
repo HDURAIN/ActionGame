@@ -31,6 +31,14 @@ public:
 	FGameplayAttributeData MaxHealth;
 	ATTRIBUTE_ACCESSORS(UAG_EnemyAttributeSet, MaxHealth)
 
+	UPROPERTY(BlueprintReadOnly, Category = "Attack", ReplicatedUsing = OnRep_AttackPower)
+	FGameplayAttributeData AttackPower;
+	ATTRIBUTE_ACCESSORS(UAG_EnemyAttributeSet, AttackPower)
+
+	UPROPERTY(BlueprintReadOnly, Category = "Attack", ReplicatedUsing = OnRep_AttackMultiplier)
+	FGameplayAttributeData AttackMultiplier;
+	ATTRIBUTE_ACCESSORS(UAG_EnemyAttributeSet, AttackMultiplier)
+
 	UPROPERTY(BlueprintReadOnly, Category = "BountyGold", ReplicatedUsing = OnRep_BountyGold)
 	FGameplayAttributeData BountyGold;
 	ATTRIBUTE_ACCESSORS(UAG_EnemyAttributeSet, BountyGold)
@@ -44,6 +52,12 @@ protected:
 
 	UFUNCTION()
 	virtual void OnRep_MaxHealth(const FGameplayAttributeData& OldMaxHealth);
+
+	UFUNCTION()
+	virtual void OnRep_AttackPower(const FGameplayAttributeData& OldAttackPower);
+
+	UFUNCTION()
+	virtual void OnRep_AttackMultiplier(const FGameplayAttributeData& OldAttackMultiplier);
 
 	UFUNCTION()
 	virtual void OnRep_BountyGold(const FGameplayAttributeData& OldBountyGold);

@@ -14,6 +14,7 @@
 class UAG_EnemyAttributeSet;
 class UGameplayEffect;
 class UGameplayAbility;
+class UEnemyConfigDataAsset;
 
 UCLASS(Abstract)
 class ACTIONGAME_API AEnemyCharacterBase : public ACharacter, public IAbilitySystemInterface
@@ -55,6 +56,13 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Abilities|Events")
 	FGameplayTag ZeroHealthEventTag;
 
+	// Damage
+	UPROPERTY(EditDefaultsOnly, Category = "PrimaryAttack|Damage")
+	TSubclassOf<UGameplayEffect> DamageEffectClass = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, Category = "PrimaryAttack|Damage")
+	FGameplayTag DamageDataTag = FGameplayTag::RequestGameplayTag(TEXT("Data.Damage"));
+
 protected:
 	// Targeting helpers
 	virtual bool IsValidTargetCandidate(ACharacter* Candidate) const;
@@ -70,16 +78,20 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Abilities|Startup")
 	TArray<TSubclassOf<UGameplayEffect>> StartupEffects;
 
+	/** 通用初始化 GE：用 SetByCaller 注入 Health/MaxHealth/AttackPower/AttackMultiplier/BountyGold */
+	UPROPERTY(EditDefaultsOnly, Category = "Abilities|Init")
+	TSubclassOf<UGameplayEffect> EnemyInitEffectClass;
+
 protected:
 	// Runtime config
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy|Runtime")
-	EEnemyMovementType EnemyMovementType = EEnemyMovementType::Ground;
+	EEnemyMovementType EnemyMovementType = EEnemyMovementType::Flying;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy|Runtime")
 	float TargetAcceptanceRadius = 100.f;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy|Runtime")
-	bool bUsePathfinding = true;
+	bool bUsePathfinding = false;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy|Runtime")
 	float AttackRange = 150.f;
@@ -89,6 +101,15 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy|Runtime")
 	bool bCanAttack = true;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Enemy|Runtime")
+	float BaseAttackPower = 10.0f;
+
+	UPROPERTY(Transient)
+	TObjectPtr<UEnemyConfigDataAsset> EnemyConfig;
+
+	UPROPERTY(Transient)
+	bool bInitAttributesApplied = false;
 
 public:
 	UFUNCTION(BlueprintPure, Category = "Enemy|Movement")
@@ -110,6 +131,8 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Enemy|Combat")
 	virtual void PerformAttack(AActor* TargetActor);
 
+	void InitFromSpawnEntry(const FEnemySpawnEntry& InEntry);
+
 private:
 	ACharacter* FindNearestAliveCharacter() const;
 	bool IsCharacterDead(const ACharacter* Character) const;
@@ -118,4 +141,5 @@ private:
 	void GiveDeathAbility();
 	void ApplyStartupEffects();
 	void ApplyMovementTypeConfig();
+	void ApplyInitAttributesFromConfig();
 };

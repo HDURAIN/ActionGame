@@ -12,13 +12,17 @@
 
 #include "GameplayEffectExtension.h"
 #include "GameplayEffectTypes.h"
+#include "ActionGameTypes.h"
+#include "DataAssets/EnemyConfigDataAsset.h"
 #include <BehaviorTree/Decorators/BTDecorator_ConditionalLoop.h>
+#include "GameplayEffect.h"
 
 AEnemyCharacterBase::AEnemyCharacterBase()
 {
 	PrimaryActorTick.bCanEverTick = false;
 	bReplicates = true;
 
+	// GAS
 	AbilitySystemComponent = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("AbilitySystemComponent"));
 	if (AbilitySystemComponent)
 	{
@@ -28,8 +32,8 @@ AEnemyCharacterBase::AEnemyCharacterBase()
 
 	EnemyAttributeSet = CreateDefaultSubobject<UAG_EnemyAttributeSet>(TEXT("EnemyAttributeSet"));
 
+	// 死亡
 	DeadTag = FGameplayTag::RequestGameplayTag(TEXT("State.Dead"));
-
 	if (AbilitySystemComponent && EnemyAttributeSet)
 	{
 		AbilitySystemComponent
@@ -41,28 +45,6 @@ AEnemyCharacterBase::AEnemyCharacterBase()
 			EGameplayTagEventType::NewOrRemoved
 		).AddUObject(this, &AEnemyCharacterBase::OnRagdollStateTagChanged);
 	}
-}
-
-UAbilitySystemComponent* AEnemyCharacterBase::GetAbilitySystemComponent() const
-{
-	return AbilitySystemComponent;
-}
-
-void AEnemyCharacterBase::PerformAttack(AActor* TargetActor)
-{
-	// Base default: do nothing.
-}
-
-void AEnemyCharacterBase::ApplySpawnEntryConfig(const FEnemySpawnEntry& InConfig)
-{
-	EnemyMovementType = InConfig.MovementType;
-	TargetAcceptanceRadius = InConfig.AcceptanceRadius;
-	bUsePathfinding = InConfig.bUsePathfinding;
-	AttackRange = InConfig.AttackRange;
-	AttackCooldown = InConfig.AttackCooldown;
-	bCanAttack = InConfig.bCanAttack;
-
-	ApplyMovementTypeConfig();
 }
 
 void AEnemyCharacterBase::BeginPlay()
@@ -79,8 +61,29 @@ void AEnemyCharacterBase::BeginPlay()
 		AbilitySystemComponent->InitAbilityActorInfo(this, this);
 	}
 
+	// Deferred Spawn: Init 之后才调用 ApplyInitAttributesFromConfig，确保 EnemyConfig 已经准备好了
+	ApplyInitAttributesFromConfig();
+
+	// 赋予死亡能力，确保死了之后能进 ragdoll 状态
 	GiveDeathAbility();
+
+	// 另外的一些初始效果
 	ApplyStartupEffects();
+}
+
+UAbilitySystemComponent* AEnemyCharacterBase::GetAbilitySystemComponent() const
+{
+	return AbilitySystemComponent;
+}
+
+void AEnemyCharacterBase::PerformAttack(AActor* TargetActor)
+{
+	// Base default: do nothing.
+}
+
+void AEnemyCharacterBase::InitFromSpawnEntry(const FEnemySpawnEntry& InEntry)
+{
+	EnemyConfig = InEntry.EnemyConfig;
 }
 
 ACharacter* AEnemyCharacterBase::FindBestTarget() const
@@ -174,8 +177,36 @@ void AEnemyCharacterBase::ApplyStartupEffects()
 	}
 }
 
-void AEnemyCharacterBase::ApplyMovementTypeConfig()
+void AEnemyCharacterBase::ApplyInitAttributesFromConfig()
 {
+	if (!HasAuthority())
+	{
+		return;
+	}
+	if (bInitAttributesApplied)
+	{
+		return;
+	}
+	if (!AbilitySystemComponent || !EnemyInitEffectClass)
+	{
+		return;
+	}
+	if (!EnemyConfig)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[%s] ApplyInitAttributesFromConfig: EnemyConfig is null (did you forget Deferred InitFromSpawnEntry?)"), *GetName());
+		return;
+	}
+
+	const FEnemyConfigData& D = EnemyConfig->EnemyConfigData;
+
+	EnemyMovementType = D.MovementType;
+	TargetAcceptanceRadius = D.AcceptanceRadius;
+	bUsePathfinding = D.bUsePathfinding;
+	AttackRange = D.AttackRange;
+	AttackCooldown = D.AttackCooldown;
+	bCanAttack = D.bCanAttack;
+	DamageEffectClass = D.DamageEffectClass;
+
 	UCharacterMovementComponent* MoveComp = GetCharacterMovement();
 	if (!MoveComp)
 	{
@@ -192,8 +223,46 @@ void AEnemyCharacterBase::ApplyMovementTypeConfig()
 		MoveComp->SetMovementMode(MOVE_Walking);
 		MoveComp->GravityScale = 1.f;
 	}
+
+	// Health 默认等于 MaxHealth
+	const float InitMaxHealth = FMath::Max(0.01f, D.MaxHealth);
+	const float InitHealth = FMath::Max(0.01f, (D.Health > 0.f) ? D.Health : InitMaxHealth);
+
+	const float InitAttackPower = FMath::Max(0.f, D.BaseAttackPower);
+	const float InitAttackMul = FMath::Max(0.f, D.AttackMultiplier);
+	const float InitBountyGold = FMath::Max(0.f, D.BountyGold);
+
+	// 统一约定的 SetByCaller Tags（建议用 Data.Init.*，避免和 Damage/CD 的 Data.* 冲突）
+	static const FGameplayTag Tag_InitHealth = FGameplayTag::RequestGameplayTag(TEXT("Data.Init.Health"));
+	static const FGameplayTag Tag_InitMaxHealth = FGameplayTag::RequestGameplayTag(TEXT("Data.Init.MaxHealth"));
+	static const FGameplayTag Tag_InitAttackPower = FGameplayTag::RequestGameplayTag(TEXT("Data.Init.AttackPower"));
+	static const FGameplayTag Tag_InitAttackMul = FGameplayTag::RequestGameplayTag(TEXT("Data.Init.AttackMultiplier"));
+	static const FGameplayTag Tag_InitBountyGold = FGameplayTag::RequestGameplayTag(TEXT("Data.Init.BountyGold"));
+
+	FGameplayEffectContextHandle Ctx = AbilitySystemComponent->MakeEffectContext();
+	Ctx.AddSourceObject(this);
+
+	FGameplayEffectSpecHandle Spec = AbilitySystemComponent->MakeOutgoingSpec(EnemyInitEffectClass, 1.f, Ctx);
+	if (!Spec.IsValid())
+	{
+		return;
+	}
+
+	// 设置 SetByCaller 参数
+	Spec.Data->SetSetByCallerMagnitude(Tag_InitHealth, InitHealth);
+	Spec.Data->SetSetByCallerMagnitude(Tag_InitMaxHealth, InitMaxHealth);
+	Spec.Data->SetSetByCallerMagnitude(Tag_InitAttackPower, InitAttackPower);
+	Spec.Data->SetSetByCallerMagnitude(Tag_InitAttackMul, InitAttackMul);
+	Spec.Data->SetSetByCallerMagnitude(Tag_InitBountyGold, InitBountyGold);
+	// 应用 Init Effect 到自己身上
+	AbilitySystemComponent->ApplyGameplayEffectSpecToSelf(*Spec.Data.Get());
+
+	bInitAttributesApplied = true;
+	UE_LOG(LogTemp, Log, TEXT("[%s] InitAttributes applied: HP=%.1f/%.1f AP=%.1f Mul=%.2f Gold=%.1f"),
+		*GetName(), InitHealth, InitMaxHealth, InitAttackPower, InitAttackMul, InitBountyGold);
 }
 
+// 死亡
 void AEnemyCharacterBase::OnHealthAttributeChanged(const FOnAttributeChangeData& Data)
 {
 	if (Data.NewValue > 0.f || Data.OldValue <= 0.f)
@@ -218,6 +287,7 @@ void AEnemyCharacterBase::OnHealthAttributeChanged(const FOnAttributeChangeData&
 	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, ZeroHealthEventTag, Payload);
 }
 
+// 死亡
 void AEnemyCharacterBase::OnRagdollStateTagChanged(const FGameplayTag CallbackTag, int32 NewCount)
 {
 	if (NewCount > 0)
@@ -226,6 +296,7 @@ void AEnemyCharacterBase::OnRagdollStateTagChanged(const FGameplayTag CallbackTa
 	}
 }
 
+// 死亡
 void AEnemyCharacterBase::StartRagdoll()
 {
 	if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())

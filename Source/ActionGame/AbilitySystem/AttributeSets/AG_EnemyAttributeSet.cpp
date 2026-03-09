@@ -23,6 +23,16 @@ void UAG_EnemyAttributeSet::OnRep_MaxHealth(const FGameplayAttributeData& OldMax
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UAG_EnemyAttributeSet, MaxHealth, OldMaxHealth);
 }
 
+void UAG_EnemyAttributeSet::OnRep_AttackPower(const FGameplayAttributeData& OldAttackPower)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UAG_EnemyAttributeSet, AttackPower, OldAttackPower);
+}
+
+void UAG_EnemyAttributeSet::OnRep_AttackMultiplier(const FGameplayAttributeData& OldAttackMultiplier)
+{
+	GAMEPLAYATTRIBUTE_REPNOTIFY(UAG_EnemyAttributeSet, AttackMultiplier, OldAttackMultiplier);
+}
+
 void UAG_EnemyAttributeSet::OnRep_BountyGold(const FGameplayAttributeData& OldBountyGold)
 {
 	GAMEPLAYATTRIBUTE_REPNOTIFY(UAG_EnemyAttributeSet, BountyGold, OldBountyGold);
@@ -36,5 +46,7 @@ void UAG_EnemyAttributeSet::GetLifetimeReplicatedProps(TArray<class FLifetimePro
 	// 类  成员变量  同步条件 (COND_None)无限制  同步后是否调用OnRep
 	DOREPLIFETIME_CONDITION_NOTIFY(UAG_EnemyAttributeSet, Health, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UAG_EnemyAttributeSet, MaxHealth, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UAG_EnemyAttributeSet, AttackPower, COND_None, REPNOTIFY_Always);
+	DOREPLIFETIME_CONDITION_NOTIFY(UAG_EnemyAttributeSet, AttackMultiplier, COND_None, REPNOTIFY_Always);
 	DOREPLIFETIME_CONDITION_NOTIFY(UAG_EnemyAttributeSet, BountyGold, COND_None, REPNOTIFY_Always);
 }

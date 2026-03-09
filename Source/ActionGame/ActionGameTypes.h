@@ -6,6 +6,7 @@
 #include "ActionGameTypes.generated.h"
 
 class AEnemyCharacterBase;
+class UEnemyConfigDataAsset;
 
 USTRUCT(BlueprintType)
 struct FCharacterData
@@ -78,25 +79,13 @@ enum class EEnemyMovementType : uint8
 };
 
 USTRUCT(BlueprintType)
-struct FEnemySpawnEntry
+struct FEnemyConfigData
 {
 	GENERATED_BODY()
-
-	/** 要生成的敌人类 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawn")
-	TSubclassOf<AEnemyCharacterBase> EnemyClass;
-
-	/** 权重 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawn", meta = (ClampMin = "0"))
-	int32 Weight = 1;
 
 	/** 移动类型：走地 / 飞行 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement")
 	EEnemyMovementType MovementType = EEnemyMovementType::Ground;
-
-	/** 生成高度偏移 */
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawn", meta = (ClampMin = "0.0"))
-	float SpawnHeightOffset = 0.f;
 
 	/** MoveTo 的接受半径 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Movement", meta = (ClampMin = "0.0"))
@@ -114,8 +103,53 @@ struct FEnemySpawnEntry
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat", meta = (ClampMin = "0.01"))
 	float AttackCooldown = 1.0f;
 
+	// 伤害类型
+	UPROPERTY(EditDefaultsOnly, Category = "PrimaryAttack|Damage")
+	TSubclassOf<UGameplayEffect> DamageEffectClass = nullptr;
+
+	/** 基础伤害 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat", meta = (ClampMin = "0.01"))
+	float BaseAttackPower = 10.f;
+
+	/** 伤害倍率 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat", meta = (ClampMin = "0.01"))
+	float AttackMultiplier = 10.f;
+
+	/** 击杀奖励金币 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Reward", meta = (ClampMin = "0.01"))
+	float BountyGold = 126.f;
+
+	/** 生命值 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health", meta = (ClampMin = "0.01"))
+	float Health = 100.f;
+
+	/** 最大生命值 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Health", meta = (ClampMin = "0.01"))
+	float MaxHealth = 100.f;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
 	bool bCanAttack = true;
+};
+
+USTRUCT(BlueprintType)
+struct FEnemySpawnEntry
+{
+	GENERATED_BODY()
+
+	/** 要生成的敌人类 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawn")
+	TSubclassOf<AEnemyCharacterBase> EnemyClass;
+
+	/** 权重 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawn", meta = (ClampMin = "0"))
+	int32 Weight = 1;
+
+	/** 生成高度偏移 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawn", meta = (ClampMin = "0.0"))
+	float SpawnHeightOffset = 0.f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Config")
+	TObjectPtr<UEnemyConfigDataAsset> EnemyConfig;
 };
 
 UENUM(BlueprintType)

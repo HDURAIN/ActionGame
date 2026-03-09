@@ -14,6 +14,19 @@ AEnemyFlyingSuiciderCharacter::AEnemyFlyingSuiciderCharacter()
 	PrimaryActorTick.bCanEverTick = false;
 	bUseControllerRotationYaw = false;
 
+	if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
+	{
+		MoveComp->SetMovementMode(MOVE_Flying);
+		MoveComp->GravityScale = 0.f;
+
+		MoveComp->MaxFlySpeed = FlySpeed;
+		MoveComp->BrakingDecelerationFlying = BrakingDecel;
+
+		MoveComp->bOrientRotationToMovement = bFaceMoveDirection;
+		MoveComp->RotationRate = FRotator(0.f, TurnRateYaw, 0.f);
+	}
+
+
 	TriggerSphere = CreateDefaultSubobject<USphereComponent>(TEXT("TriggerSphere"));
 	TriggerSphere->SetupAttachment(RootComponent);
 
@@ -38,24 +51,13 @@ void AEnemyFlyingSuiciderCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	if (UCharacterMovementComponent* MoveComp = GetCharacterMovement())
-	{
-		MoveComp->SetMovementMode(MOVE_Flying);
-		MoveComp->GravityScale = 0.f;
-
-		MoveComp->MaxFlySpeed = FlySpeed;
-		MoveComp->BrakingDecelerationFlying = BrakingDecel;
-
-		MoveComp->bOrientRotationToMovement = bFaceMoveDirection;
-		MoveComp->RotationRate = FRotator(0.f, TurnRateYaw, 0.f);
-	}
-
 	if (TriggerSphere)
 	{
 		TriggerSphere->SetSphereRadius(TriggerRadius, true);
 	}
 }
 
+// ´¥·¢±¬Õ¨
 void AEnemyFlyingSuiciderCharacter::OnTriggerBeginOverlap(
 	UPrimitiveComponent* OverlappedComp,
 	AActor* OtherActor,
