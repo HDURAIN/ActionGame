@@ -19,13 +19,7 @@ public:
 	AEnemyProjectile();
 
 	/**
-	 * 初始化投射物（服务器调用）
-	 * @param InSourceASC   伤害来源 ASC（一般是敌人的 ASC）
-	 * @param InDamageGE    伤害 GameplayEffect（支持 SetByCaller）
-	 * @param InDamageTag   SetByCaller 的 tag（例如 Data.Damage）
-	 * @param InDamageValue 伤害数值（正数传入，内部会写成 -Damage）
-	 * @param Dir           发射方向（单位向量）
-	 * @param Speed         初速度
+	 * Initialize projectile on server.
 	 */
 	void InitProjectile(
 		UAbilitySystemComponent* InSourceASC,
@@ -45,15 +39,12 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Projectile")
 	TObjectPtr<UProjectileMovementComponent> MovementComp;
 
-	/** 碰撞半径 */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile")
 	float SphereRadius = 8.f;
 
-	/** 最长存活时间（防止飞丢） */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile")
 	float LifeSeconds = 4.f;
 
-	/** 命中任何东西后是否立即销毁（通常是 true） */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Projectile")
 	bool bDestroyOnHit = true;
 
@@ -66,8 +57,16 @@ protected:
 		FVector NormalImpulse,
 		const FHitResult& Hit);
 
+	UFUNCTION()
+	void OnProjectileBeginOverlap(
+		UPrimitiveComponent* OverlappedComp,
+		AActor* OtherActor,
+		UPrimitiveComponent* OtherComp,
+		int32 OtherBodyIndex,
+		bool bFromSweep,
+		const FHitResult& SweepResult);
+
 private:
-	// ===== Runtime Damage Payload (server authoritative) =====
 	UPROPERTY(Transient)
 	TObjectPtr<UAbilitySystemComponent> SourceASC;
 
@@ -82,4 +81,5 @@ private:
 
 private:
 	void ApplyDamageIfPossible(const FHitResult& Hit);
+	bool ShouldIgnoreTargetActor(const AActor* TargetActor) const;
 };

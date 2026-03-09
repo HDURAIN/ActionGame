@@ -5,6 +5,7 @@
 #include "AIController.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "Characters/EnemyCharacterBase.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 UBTService_UpdateTarget::UBTService_UpdateTarget()
 {
@@ -37,12 +38,17 @@ void UBTService_UpdateTarget::TickNode(UBehaviorTreeComponent& OwnerComp, uint8*
 		return;
 	}
 
+	UCharacterMovementComponent* MoveComp = Enemy->GetCharacterMovement();
+	if (!MoveComp)
+	{
+		return;
+	}
+
 	// BT 版 EnemyBase：用公开接口 FindBestTarget（内部会选最近存活玩家）
 	AActor* TargetActor = Enemy->FindBestTarget();
 
 	BB->SetValueAsObject(GetSelectedBlackboardKey(), TargetActor);
 	BB->SetValueAsBool(TEXT("CanAttack"), Enemy->CanAttack());
-
 
 	bool bInRange = false;
 	if (IsValid(TargetActor))
@@ -54,4 +60,19 @@ void UBTService_UpdateTarget::TickNode(UBehaviorTreeComponent& OwnerComp, uint8*
 	BB->SetValueAsBool(TEXT("InAttackRange"), bInRange);
 
 	BB->SetValueAsFloat(TEXT("AttackCooldown"), FMath::Max(0.05f, Enemy->GetAttackCooldown()));
+
+	if (IsValid(TargetActor) && bInRange)
+	{
+		// 攻击：由 Controller Focus 驱动朝向
+		MoveComp->bOrientRotationToMovement = false;
+		MoveComp->bUseControllerDesiredRotation = true;
+		AIC->SetFocus(TargetActor, EAIFocusPriority::Gameplay);
+	}
+	else
+	{
+		// 追击/非攻击：按移动方向转向
+		AIC->ClearFocus(EAIFocusPriority::Gameplay);
+		MoveComp->bUseControllerDesiredRotation = false;
+		MoveComp->bOrientRotationToMovement = true;
+	}
 }

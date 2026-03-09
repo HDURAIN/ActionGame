@@ -122,13 +122,14 @@ void AEnemyGroundShooterCharacter::PerformAttack(AActor* TargetActor)
 	FActorSpawnParameters SpawnParams;
 	SpawnParams.Owner = this;
 	SpawnParams.Instigator = this;
-	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AlwaysSpawn;
+	SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
+	const FVector SpawnLoc = MuzzleLoc + ShotDir * FMath::Max(0.f, ProjectileSpawnForwardOffset);
 	const FRotator SpawnRot = ShotDir.Rotation();
 
 	AEnemyProjectile* Proj = GetWorld()->SpawnActor<AEnemyProjectile>(
 		ProjectileClass,
-		MuzzleLoc,
+		SpawnLoc,
 		SpawnRot,
 		SpawnParams
 	);
@@ -177,3 +178,4 @@ void AEnemyGroundShooterCharacter::BeginPlay()
 		MoveComp->RotationRate = FRotator(0.f, TurnRateYaw, 0.f);
 	}
 }
+
