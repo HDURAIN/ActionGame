@@ -16,6 +16,7 @@
 #include "DataAssets/EnemyConfigDataAsset.h"
 #include <BehaviorTree/Decorators/BTDecorator_ConditionalLoop.h>
 #include "GameplayEffect.h"
+#include "ActionGameGameState.h"
 
 AEnemyCharacterBase::AEnemyCharacterBase()
 {
@@ -61,7 +62,7 @@ void AEnemyCharacterBase::BeginPlay()
 		AbilitySystemComponent->InitAbilityActorInfo(this, this);
 	}
 
-	// Deferred Spawn: Init 之后才调用 ApplyInitAttributesFromConfig，确保 EnemyConfig 已经准备好了
+	// Init 
 	InitializeEnemy();
 
 	// 赋予死亡能力，确保死了之后能进 ragdoll 状态
@@ -74,6 +75,15 @@ void AEnemyCharacterBase::BeginPlay()
 UAbilitySystemComponent* AEnemyCharacterBase::GetAbilitySystemComponent() const
 {
 	return AbilitySystemComponent;
+}
+
+int32 AEnemyCharacterBase::GetCurrentDifficultyStage() const
+{
+	if (const AActionGameGameState* GS = GetWorld()->GetGameState<AActionGameGameState>())
+	{
+		return GS->GetDifficultyStage();
+	}
+	return 0;
 }
 
 void AEnemyCharacterBase::PerformAttack(AActor* TargetActor)
@@ -298,16 +308,28 @@ void AEnemyCharacterBase::ApplyInitAttributes()
 		return;
 	}
 
+	// 获取当前难度阶段
+	const int32 Stage = GetCurrentDifficultyStage();
+	const float HealthScale = FMath::Pow(1.18f, Stage);
+	const float AttackScale = FMath::Pow(1.12f, Stage);
+	const float GoldScale = FMath::Pow(1.10f, Stage);
+
 	const FEnemyConfigData& D = EnemyConfig->EnemyConfigData;
 
 	// =========================
 	// Attribute init（GAS）
 	// =========================
-	const float InitMaxHealth = FMath::Max(0.01f, D.MaxHealth);
-	const float InitHealth = FMath::Max(0.01f, (D.Health > 0.f) ? D.Health : InitMaxHealth);
-	const float InitAttackPower = FMath::Max(0.f, D.BaseAttackPower);
-	const float InitAttackMul = FMath::Max(0.f, D.AttackMultiplier);
-	const float InitBountyGold = FMath::Max(0.f, D.BountyGold);
+	const float BaseMaxHealth = FMath::Max(0.01f, D.MaxHealth);
+	const float BaseHealth = FMath::Max(0.01f, (D.Health > 0.f) ? D.Health : BaseMaxHealth);
+	const float BaseAttackPower = FMath::Max(0.f, D.BaseAttackPower);
+	const float BaseAttackMul = FMath::Max(0.f, D.AttackMultiplier);
+	const float BaseBountyGold = FMath::Max(0.f, D.BountyGold);
+
+	const float InitMaxHealth = HealthScale * BaseMaxHealth;
+	const float InitHealth = HealthScale * BaseHealth;
+	const float InitAttackPower = AttackScale * BaseAttackPower;
+	const float InitAttackMul = BaseAttackMul;
+	const float InitBountyGold = GoldScale * BaseBountyGold;
 
 	static const FGameplayTag Tag_InitHealth =
 		FGameplayTag::RequestGameplayTag(TEXT("Data.Init.Health"));
@@ -351,9 +373,21 @@ void AEnemyCharacterBase::ApplyInitAttributes()
 
 	bInitAttributesApplied = true;
 
+	const FString ConfigName = EnemyConfig ? EnemyConfig->GetName() : TEXT("None");
 	UE_LOG(LogTemp, Log,
-		TEXT("[%s] InitAttributes applied: HP=%.1f/%.1f AP=%.1f Mul=%.2f Gold=%.1f"),
+		TEXT("[%s] InitAttributes applied | Stage=%d | Scales: Health=%.3f Attack=%.3f Gold=%.3f | ")
+		TEXT("Base: HP=%.1f/%.1f AP=%.1f Mul=%.2f Gold=%.1f | ")
+		TEXT("Final: HP=%.1f/%.1f AP=%.1f Mul=%.2f Gold=%.1f"),
 		*GetName(),
+		Stage,
+		HealthScale,
+		AttackScale,
+		GoldScale,
+		BaseHealth,
+		BaseMaxHealth,
+		BaseAttackPower,
+		BaseAttackMul,
+		BaseBountyGold,
 		InitHealth,
 		InitMaxHealth,
 		InitAttackPower,

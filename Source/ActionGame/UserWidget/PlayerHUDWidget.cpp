@@ -1,45 +1,64 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "PlayerHUDWidget.h"
 
 #include "AbilitySystemComponent.h"
 #include "AbilitySystem/AttributeSets/AG_AttributeSetBase.h"
-
 #include "Components/ProgressBar.h"
 #include "Components/TextBlock.h"
+#include "Engine/World.h"
+#include "ActionGameGameState.h"
 
 void UPlayerHUDWidget::InitWithASC(UAbilitySystemComponent* InASC)
 {
-	if (!InASC) return;
+	if (!InASC)
+	{
+		return;
+	}
 
-	if (ASC == InASC) return;
+	if (ASC == InASC)
+	{
+		return;
+	}
 
-	// 如果重复绑定先解绑
+	// 如果重复初始化，先解绑旧 ASC
 	UnbindAttributeDelegates();
 
 	ASC = InASC;
 
-	// ===== 初始数值 =====
-	const float Health =
-		ASC->GetNumericAttribute(UAG_AttributeSetBase::GetHealthAttribute());
+	// 初始化一次玩家属性 UI
+	RefreshInitialAttributeUI();
 
-	CachedMaxHealth =
-		ASC->GetNumericAttribute(UAG_AttributeSetBase::GetMaxHealthAttribute());
+	// 初始化一次 GameState UI
+	RefreshGameStateSection();
 
-	const float Gold =
-		ASC->GetNumericAttribute(UAG_AttributeSetBase::GetGoldAttribute());
-
-	RefreshHealthBar(Health);
-	RefreshGold(Gold);
-
-	// ===== 绑定监听 =====
+	// 绑定属性变化监听
 	BindAttributeDelegates();
 }
 
+void UPlayerHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+	Super::NativeTick(MyGeometry, InDeltaTime);
+
+	// GameState 这类全局数据直接轻量刷新即可
+	RefreshGameStateSection();
+}
+
+void UPlayerHUDWidget::NativeDestruct()
+{
+	UnbindAttributeDelegates();
+
+	Super::NativeDestruct();
+}
+
+//
+// ASC Binding
+//
+
 void UPlayerHUDWidget::BindAttributeDelegates()
 {
-	if (!ASC) return;
+	if (!ASC)
+	{
+		return;
+	}
 
 	ASC->GetGameplayAttributeValueChangeDelegate(
 		UAG_AttributeSetBase::GetHealthAttribute()
@@ -56,7 +75,10 @@ void UPlayerHUDWidget::BindAttributeDelegates()
 
 void UPlayerHUDWidget::UnbindAttributeDelegates()
 {
-	if (!ASC) return;
+	if (!ASC)
+	{
+		return;
+	}
 
 	ASC->GetGameplayAttributeValueChangeDelegate(
 		UAG_AttributeSetBase::GetHealthAttribute()
@@ -71,11 +93,9 @@ void UPlayerHUDWidget::UnbindAttributeDelegates()
 	).RemoveAll(this);
 }
 
-void UPlayerHUDWidget::NativeDestruct()
-{
-	UnbindAttributeDelegates();
-	Super::NativeDestruct();
-}
+//
+// Attribute Change Callbacks
+//
 
 void UPlayerHUDWidget::OnHealthChanged(const FOnAttributeChangeData& Data)
 {
@@ -85,11 +105,7 @@ void UPlayerHUDWidget::OnHealthChanged(const FOnAttributeChangeData& Data)
 void UPlayerHUDWidget::OnMaxHealthChanged(const FOnAttributeChangeData& Data)
 {
 	CachedMaxHealth = Data.NewValue;
-
-	const float CurrentHealth =
-		ASC->GetNumericAttribute(UAG_AttributeSetBase::GetHealthAttribute());
-
-	RefreshHealthBar(CurrentHealth);
+	RefreshHealthBar(GetCurrentHealth());
 }
 
 void UPlayerHUDWidget::OnGoldChanged(const FOnAttributeChangeData& Data)
@@ -97,9 +113,24 @@ void UPlayerHUDWidget::OnGoldChanged(const FOnAttributeChangeData& Data)
 	RefreshGold(Data.NewValue);
 }
 
+//
+// UI Refresh - Player Attributes
+//
+
+void UPlayerHUDWidget::RefreshInitialAttributeUI()
+{
+	CachedMaxHealth = GetCurrentMaxHealth();
+
+	RefreshHealthBar(GetCurrentHealth());
+	RefreshGold(GetCurrentGold());
+}
+
 void UPlayerHUDWidget::RefreshHealthBar(float Health)
 {
-	if (!ProgressBar_Health) return;
+	if (!ProgressBar_Health)
+	{
+		return;
+	}
 
 	const float Percent =
 		CachedMaxHealth > KINDA_SMALL_NUMBER
@@ -111,7 +142,102 @@ void UPlayerHUDWidget::RefreshHealthBar(float Health)
 
 void UPlayerHUDWidget::RefreshGold(float Gold)
 {
-	if (!Text_Gold) return;
+	if (!Text_Gold)
+	{
+		return;
+	}
 
-	Text_Gold->SetText(FText::FromString(FString::Printf(TEXT("$%d"), FMath::RoundToInt(Gold))));
+	Text_Gold->SetText(
+		FText::FromString(FString::Printf(TEXT("$%d"), FMath::RoundToInt(Gold)))
+	);
+}
+
+//
+// UI Refresh - GameState
+//
+
+void UPlayerHUDWidget::RefreshGameStateSection()
+{
+	const AActionGameGameState* GS = GetActionGameGameState();
+	if (!GS)
+	{
+		return;
+	}
+
+	RefreshGameTime(GS->GetElapsedSurvivalTime());
+	RefreshStage(GS->GetDifficultyStage());
+}
+
+void UPlayerHUDWidget::RefreshGameTime(float ElapsedSeconds)
+{
+	if (!Text_GameTime)
+	{
+		return;
+	}
+
+	const int32 TotalSeconds = FMath::Max(0, FMath::FloorToInt(ElapsedSeconds));
+	const int32 Minutes = TotalSeconds / 60;
+	const int32 Seconds = TotalSeconds % 60;
+
+	Text_GameTime->SetText(
+		FText::FromString(FString::Printf(TEXT("%02d:%02d"), Minutes, Seconds))
+	);
+}
+
+void UPlayerHUDWidget::RefreshStage(int32 Stage)
+{
+	if (!Text_Stage)
+	{
+		return;
+	}
+
+	// UI 给玩家看时通常从 1 开始更自然
+	Text_Stage->SetText(
+		FText::FromString(FString::Printf(TEXT("Stage %d"), Stage + 1))
+	);
+}
+
+//
+// Helpers
+//
+
+AActionGameGameState* UPlayerHUDWidget::GetActionGameGameState() const
+{
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return nullptr;
+	}
+
+	return World->GetGameState<AActionGameGameState>();
+}
+
+float UPlayerHUDWidget::GetCurrentHealth() const
+{
+	if (!ASC)
+	{
+		return 0.f;
+	}
+
+	return ASC->GetNumericAttribute(UAG_AttributeSetBase::GetHealthAttribute());
+}
+
+float UPlayerHUDWidget::GetCurrentMaxHealth() const
+{
+	if (!ASC)
+	{
+		return 0.f;
+	}
+
+	return ASC->GetNumericAttribute(UAG_AttributeSetBase::GetMaxHealthAttribute());
+}
+
+float UPlayerHUDWidget::GetCurrentGold() const
+{
+	if (!ASC)
+	{
+		return 0.f;
+	}
+
+	return ASC->GetNumericAttribute(UAG_AttributeSetBase::GetGoldAttribute());
 }
