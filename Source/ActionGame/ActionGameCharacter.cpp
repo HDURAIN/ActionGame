@@ -50,7 +50,7 @@
 AActionGameCharacter::AActionGameCharacter(const FObjectInitializer& ObjectInitializer)
 	: Super(ObjectInitializer.SetDefaultSubobjectClass<UAG_CharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
 {
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
@@ -136,6 +136,11 @@ void AActionGameCharacter::BeginPlay()
 	}
 }
 
+void AActionGameCharacter::Tick(float DeltaSeconds)
+{
+	Super::Tick(DeltaSeconds);
+	UpdateCameraMeshAutoHide();
+}
 void AActionGameCharacter::PostInitializeComponents()
 {
 	// ³õÊ¼»¯CharacterData
@@ -576,6 +581,74 @@ AActor* AActionGameCharacter::GetWeaponActor() const
 // Interaction
 // =========================================================================
 
+void AActionGameCharacter::UpdateCameraMeshAutoHide()
+{
+	if (!IsLocallyControlled())
+	{
+		ApplyCameraMeshHiddenState(false);
+		return;
+	}
+
+	if (!bEnableCameraMeshAutoHide || !CameraBoom || !FollowCamera)
+	{
+		ApplyCameraMeshHiddenState(false);
+		return;
+	}
+
+	const float TargetArmLength = FMath::Max(1.0f, CameraBoom->TargetArmLength);
+	const float CurrentArmLength = FVector::Distance(CameraBoom->GetComponentLocation(), FollowCamera->GetComponentLocation());
+	const float ArmRatio = FMath::Clamp(CurrentArmLength / TargetArmLength, 0.0f, 1.0f);
+
+	const float HideRatio = FMath::Clamp(CameraMeshHideArmRatio, 0.0f, 1.0f);
+	const float ShowRatio = FMath::Clamp(FMath::Max(CameraMeshShowArmRatio, HideRatio), 0.0f, 1.0f);
+
+	bool bShouldHide = bCameraMeshHidden;
+	if (bCameraMeshHidden)
+	{
+		bShouldHide = ArmRatio < ShowRatio;
+	}
+	else
+	{
+		bShouldHide = ArmRatio <= HideRatio;
+	}
+
+	ApplyCameraMeshHiddenState(bShouldHide);
+}
+
+void AActionGameCharacter::ApplyCameraMeshHiddenState(bool bShouldHide)
+{
+	USkeletalMeshComponent* MeshComp = GetMesh();
+	if (!MeshComp)
+	{
+		return;
+	}
+
+	if (bCameraMeshHidden == bShouldHide)
+	{
+		return;
+	}
+
+	bCameraMeshHidden = bShouldHide;
+	MeshComp->SetOwnerNoSee(bShouldHide);
+
+	auto ApplyHiddenToWeapon = [bShouldHide](UChildActorComponent* WeaponComponent)
+	{
+		if (!WeaponComponent)
+		{
+			return;
+		}
+
+		WeaponComponent->SetHiddenInGame(bShouldHide, true);
+
+		if (AActor* WeaponActor = WeaponComponent->GetChildActor())
+		{
+			WeaponActor->SetActorHiddenInGame(bShouldHide);
+		}
+	};
+
+	ApplyHiddenToWeapon(WeaponComponentRight);
+	ApplyHiddenToWeapon(WeaponComponentLeft);
+}
 void AActionGameCharacter::HandleInteractCandidateChanged(AActor* Actor, bool bAdded)
 {
 	if (!IsLocallyControlled())

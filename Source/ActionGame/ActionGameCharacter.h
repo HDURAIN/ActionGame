@@ -53,6 +53,7 @@ public:
 	// =========================================================================
 
 	virtual void BeginPlay() override;
+	virtual void Tick(float DeltaSeconds) override;
 	virtual void PostInitializeComponents() override;
 	virtual void PawnClientRestart() override;
 	virtual void Landed(const FHitResult& Hit) override;
@@ -373,4 +374,20 @@ protected:
 
 	UFUNCTION()
 	void OnRagdollStateTagChanged(const FGameplayTag CallbackTag, int32 NewCount);
+private:
+	void UpdateCameraMeshAutoHide();
+	void ApplyCameraMeshHiddenState(bool bShouldHide);
+
+private:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera|Occlusion", meta = (AllowPrivateAccess = "true"))
+	bool bEnableCameraMeshAutoHide = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera|Occlusion", meta = (ClampMin = "0.0", ClampMax = "1.0", AllowPrivateAccess = "true"))
+	float CameraMeshHideArmRatio = 0.35f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera|Occlusion", meta = (ClampMin = "0.0", ClampMax = "1.0", AllowPrivateAccess = "true"))
+	float CameraMeshShowArmRatio = 0.45f;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera|Occlusion", meta = (AllowPrivateAccess = "true"))
+	bool bCameraMeshHidden = false;
 };
