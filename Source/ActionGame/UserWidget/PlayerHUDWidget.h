@@ -32,6 +32,10 @@ protected:
 	// =========================
 	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
 	TObjectPtr<UProgressBar> ProgressBar_Health = nullptr;
+	
+	/** Optional single-line health text, e.g. "75 / 100" */
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> Text_HealthOverMax = nullptr;
 
 	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
 	TObjectPtr<UTextBlock> Text_Gold = nullptr;
@@ -72,6 +76,7 @@ private:
 	// =========================
 	void RefreshInitialAttributeUI();
 	void RefreshHealthBar(float Health);
+	void RefreshHealthText(float Health);
 	void RefreshGold(float Gold);
 
 private:

@@ -18,27 +18,22 @@ void UPlayerHUDWidget::InitWithASC(UAbilitySystemComponent* InASC)
 	{
 		return;
 	}
-
-	// 如果重复初始化，先解绑旧 ASC
+	// If re-initialized, unbind delegates from previous ASC first.
 	UnbindAttributeDelegates();
 
 	ASC = InASC;
-
-	// 初始化一次玩家属性 UI
+	// Initialize player attribute UI once.
 	RefreshInitialAttributeUI();
-
-	// 初始化一次 GameState UI
+	// Initialize GameState UI once.
 	RefreshGameStateSection();
-
-	// 绑定属性变化监听
+	// Bind attribute change listeners.
 	BindAttributeDelegates();
 }
 
 void UPlayerHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
 {
 	Super::NativeTick(MyGeometry, InDeltaTime);
-
-	// GameState 这类全局数据直接轻量刷新即可
+	// Lightweight refresh for global GameState values.
 	RefreshGameStateSection();
 }
 
@@ -127,17 +122,35 @@ void UPlayerHUDWidget::RefreshInitialAttributeUI()
 
 void UPlayerHUDWidget::RefreshHealthBar(float Health)
 {
-	if (!ProgressBar_Health)
-	{
-		return;
-	}
-
 	const float Percent =
 		CachedMaxHealth > KINDA_SMALL_NUMBER
 		? Health / CachedMaxHealth
 		: 0.f;
 
-	ProgressBar_Health->SetPercent(Percent);
+	if (ProgressBar_Health)
+	{
+		ProgressBar_Health->SetPercent(Percent);
+	}
+
+	RefreshHealthText(Health);
+}
+
+void UPlayerHUDWidget::RefreshHealthText(float Health)
+{
+	if (!Text_HealthOverMax)
+	{
+		return;
+	}
+
+	Text_HealthOverMax->SetText(
+		FText::FromString(
+			FString::Printf(
+				TEXT("%d / %d"),
+				FMath::RoundToInt(Health),
+				FMath::RoundToInt(CachedMaxHealth)
+			)
+		)
+	);
 }
 
 void UPlayerHUDWidget::RefreshGold(float Gold)
@@ -190,8 +203,7 @@ void UPlayerHUDWidget::RefreshStage(int32 Stage)
 	{
 		return;
 	}
-
-	// UI 给玩家看时通常从 1 开始更自然
+	// Show stage as 1-based index for players.
 	Text_Stage->SetText(
 		FText::FromString(FString::Printf(TEXT("Stage %d"), Stage + 1))
 	);
