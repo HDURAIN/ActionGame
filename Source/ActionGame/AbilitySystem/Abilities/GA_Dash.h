@@ -1,13 +1,12 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "AbilitySystem/Abilities/AG_GameplayAbility.h"
 #include "GA_Dash.generated.h"
 
-class UAbilityTask_WaitDelay;
-class UAnimSequenceBase;
+class UAnimMontage;
+class UAbilityTask_ApplyRootMotionConstantForce;
+class UAbilityTask_PlayMontageAndWait;
 
 UCLASS()
 class ACTIONGAME_API UGA_Dash : public UAG_GameplayAbility
@@ -33,23 +32,20 @@ public:
 	) override;
 
 private:
-	FVector ComputeDashDirection(const FGameplayAbilityActorInfo* ActorInfo) const;
+	FVector ComputeDashDirection() const;
 
 	UFUNCTION()
-	void OnDashFinished();
+	void OnDashMoveFinished();
 
 private:
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dash", meta = (AllowPrivateAccess = "true", ClampMin = "0.01"))
-	float DashDuration = 0.20f;
-
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dash", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float DashDistance = 650.0f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dash", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
-	float MinInputThreshold = 0.10f;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dash", meta = (AllowPrivateAccess = "true", ClampMin = "0.01"))
+	float DashDuration = 0.93f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dash", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
-	float MinVelocityThreshold = 10.0f;
+	float MinInputThreshold = 0.10f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dash", meta = (AllowPrivateAccess = "true"))
 	bool bAllowAirDash = false;
@@ -58,23 +54,17 @@ private:
 	bool bRotateToDashDirection = true;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dash|Animation", meta = (AllowPrivateAccess = "true"))
-	TObjectPtr<UAnimSequenceBase> DashAnimation = nullptr;
+	TObjectPtr<UAnimMontage> DashMontage = nullptr;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dash|Animation", meta = (AllowPrivateAccess = "true", ClampMin = "0.01"))
 	float DashAnimPlayRate = 1.0f;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dash|Animation", meta = (AllowPrivateAccess = "true"))
-	FName DashAnimSlotName = TEXT("DefaultSlot");
+	UPROPERTY(Transient)
+	TObjectPtr<UAbilityTask_ApplyRootMotionConstantForce> DashMoveTask = nullptr;
 
 	UPROPERTY(Transient)
-	TObjectPtr<UAbilityTask_WaitDelay> DashWaitTask = nullptr;
+	TObjectPtr<UAbilityTask_PlayMontageAndWait> DashMontageTask = nullptr;
 
 	UPROPERTY(Transient)
-	float CachedAirControl = 0.0f;
-
-	UPROPERTY(Transient)
-	bool bAirControlCached = false;
-
-	UPROPERTY(Transient)
-	bool bRootMotionScaleOverridden = false;
+	bool bMoveInputBlockedByDash = false;
 };

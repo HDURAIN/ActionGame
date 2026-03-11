@@ -1,16 +1,10 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "AbilitySystem/Abilities/GA_Dash.h"
 
 #include "ActionGameCharacter.h"
-#include "Abilities/Tasks/AbilityTask_WaitDelay.h"
-#include "Animation/AnimInstance.h"
-#include "Animation/AnimSequenceBase.h"
-#include "Components/SkeletalMeshComponent.h"
-#include "GameFramework/Character.h"
+#include "Abilities/Tasks/AbilityTask_ApplyRootMotionConstantForce.h"
+#include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
+#include "Animation/AnimMontage.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "GameFramework/Controller.h"
-#include "GameFramework/Pawn.h"
 #include "AbilitySystemLog.h"
 
 UGA_Dash::UGA_Dash()
@@ -35,12 +29,6 @@ void UGA_Dash::ActivateAbility(
 		return;
 	}
 
-	if (!HasAuthorityOrPredictionKey(ActorInfo, &ActivationInfo))
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
-		return;
-	}
-
 	UCharacterMovementComponent* MoveComp = Character->GetCharacterMovement();
 	if (!MoveComp)
 	{
@@ -54,7 +42,7 @@ void UGA_Dash::ActivateAbility(
 		return;
 	}
 
-	const FVector DashDir = ComputeDashDirection(ActorInfo);
+	const FVector DashDir = ComputeDashDirection();
 	if (DashDir.IsNearlyZero())
 	{
 		UE_LOG(LogAbilitySystem, Warning, TEXT("[%s] Dash failed: direction is zero."), *GetName());
@@ -74,36 +62,58 @@ void UGA_Dash::ActivateAbility(
 		Character->SetActorRotation(FRotator(0.f, DashRot.Yaw, 0.f));
 	}
 
-	CachedAirControl = MoveComp->AirControl;
-	bAirControlCached = true;
-	MoveComp->AirControl = 0.0f;
+	Character->PushMoveInputBlock();
+	bMoveInputBlockedByDash = true;
 
-	Character->SetAnimRootMotionTranslationScale(0.0f);
-	bRootMotionScaleOverridden = true;
-
-	if (DashAnimation)
+	if (DashMontage)
 	{
-		if (UAnimInstance* AnimInstance = Character->GetMesh() ? Character->GetMesh()->GetAnimInstance() : nullptr)
+		const float SafePlayRate = FMath::Max(0.01f, DashAnimPlayRate);
+		DashMontageTask = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
+			this,
+			NAME_None,
+			DashMontage,
+			SafePlayRate
+		);
+		if (DashMontageTask)
 		{
-			AnimInstance->PlaySlotAnimationAsDynamicMontage(DashAnimation, DashAnimSlotName, 0.02f, 0.02f, DashAnimPlayRate);
+			DashMontageTask->ReadyForActivation();
 		}
 	}
 
-	const float DashTime = FMath::Max(0.01f, DashDuration);
-	const float DashSpeed = (DashTime > KINDA_SMALL_NUMBER) ? (FMath::Max(0.f, DashDistance) / DashTime) : 0.f;
-	const FVector LaunchVelocity = DashDir * DashSpeed;
-	Character->LaunchCharacter(LaunchVelocity, true, false);
+	const float SafeDashDistance = FMath::Max(0.f, DashDistance);
+	const float SafeDashDuration = FMath::Max(0.01f, DashDuration);
+	const float DashSpeed = SafeDashDistance / SafeDashDuration;
 
-	DashWaitTask = UAbilityTask_WaitDelay::WaitDelay(this, DashTime);
-	if (DashWaitTask)
+	DashMoveTask = UAbilityTask_ApplyRootMotionConstantForce::ApplyRootMotionConstantForce(
+		this,
+		NAME_None,
+		DashDir,
+		DashSpeed,
+		SafeDashDuration,
+		false,
+		nullptr,
+		ERootMotionFinishVelocityMode::SetVelocity,
+		FVector::ZeroVector,
+		0.0f,
+		false
+	);
+
+	if (!DashMoveTask)
 	{
-		DashWaitTask->OnFinish.AddDynamic(this, &UGA_Dash::OnDashFinished);
-		DashWaitTask->ReadyForActivation();
+		if (DashMontageTask)
+		{
+			DashMontageTask->EndTask();
+			DashMontageTask = nullptr;
+		}
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
 	}
-	else
-	{
-		EndAbility(Handle, ActorInfo, ActivationInfo, true, false);
-	}
+
+	UE_LOG(LogAbilitySystem, Verbose, TEXT("[%s] Dash start. Distance=%.2f Duration=%.2f Speed=%.2f"),
+		*GetName(), SafeDashDistance, SafeDashDuration, DashSpeed);
+
+	DashMoveTask->OnFinish.AddDynamic(this, &UGA_Dash::OnDashMoveFinished);
+	DashMoveTask->ReadyForActivation();
 }
 
 void UGA_Dash::EndAbility(
@@ -114,30 +124,34 @@ void UGA_Dash::EndAbility(
 	bool bWasCancelled
 )
 {
-	AActionGameCharacter* Character = GetCharacter();
-	if (Character)
+	if (bMoveInputBlockedByDash)
 	{
-		if (UCharacterMovementComponent* MoveComp = Character->GetCharacterMovement())
+		if (AActionGameCharacter* Character = GetCharacter())
 		{
-			if (bAirControlCached)
-			{
-				MoveComp->AirControl = CachedAirControl;
-			}
+			Character->PopMoveInputBlock();
 		}
-
-		if (bRootMotionScaleOverridden)
-		{
-			Character->SetAnimRootMotionTranslationScale(1.0f);
-		}
+		bMoveInputBlockedByDash = false;
 	}
 
-	bAirControlCached = false;
-	bRootMotionScaleOverridden = false;
-	DashWaitTask = nullptr;
+	if (DashMoveTask)
+	{
+		UAbilityTask_ApplyRootMotionConstantForce* MoveTask = DashMoveTask;
+		DashMoveTask = nullptr;
+		MoveTask->OnFinish.RemoveAll(this);
+		MoveTask->EndTask();
+	}
+
+	if (DashMontageTask)
+	{
+		UAbilityTask_PlayMontageAndWait* MontageTask = DashMontageTask;
+		DashMontageTask = nullptr;
+		MontageTask->EndTask();
+	}
+
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 
-FVector UGA_Dash::ComputeDashDirection(const FGameplayAbilityActorInfo* ActorInfo) const
+FVector UGA_Dash::ComputeDashDirection() const
 {
 	const AActionGameCharacter* Character = GetCharacter();
 	if (!Character)
@@ -145,47 +159,18 @@ FVector UGA_Dash::ComputeDashDirection(const FGameplayAbilityActorInfo* ActorInf
 		return FVector::ZeroVector;
 	}
 
-	auto FlattenAndNormalize = [](const FVector& V) -> FVector
-	{
-		FVector Flat = FVector(V.X, V.Y, 0.f);
-		return Flat.Normalize() ? Flat : FVector::ZeroVector;
-	};
+	FVector InputDir = Character->GetCachedMoveInputDirection();
+	InputDir.Z = 0.f;
 
-	const float InputThresholdSq = FMath::Square(FMath::Max(0.f, MinInputThreshold));
-	const FVector LastInput = Character->GetLastMovementInputVector();
-	const FVector FlatInput = FlattenAndNormalize(LastInput);
-	if (!FlatInput.IsNearlyZero() && LastInput.SizeSquared2D() >= InputThresholdSq)
+	if (InputDir.SizeSquared2D() < FMath::Square(FMath::Max(0.f, MinInputThreshold)))
 	{
-		return FlatInput;
+		return FVector::ZeroVector;
 	}
 
-	const float VelThresholdSq = FMath::Square(FMath::Max(0.f, MinVelocityThreshold));
-	const FVector Velocity = Character->GetVelocity();
-	const FVector FlatVel = FlattenAndNormalize(Velocity);
-	if (!FlatVel.IsNearlyZero() && Velocity.SizeSquared2D() >= VelThresholdSq)
-	{
-		return FlatVel;
-	}
-
-	const bool bFaceCameraMode = Character->bUseControllerRotationYaw;
-	if (bFaceCameraMode)
-	{
-		if (const AController* Controller = ActorInfo ? ActorInfo->PlayerController.Get() : Character->GetController())
-		{
-			const FVector CtrlForward = FRotator(0.f, Controller->GetControlRotation().Yaw, 0.f).Vector();
-			const FVector FlatCtrlForward = FlattenAndNormalize(CtrlForward);
-			if (!FlatCtrlForward.IsNearlyZero())
-			{
-				return FlatCtrlForward;
-			}
-		}
-	}
-
-	return FlattenAndNormalize(Character->GetActorForwardVector());
+	return InputDir.GetSafeNormal2D();
 }
 
-void UGA_Dash::OnDashFinished()
+void UGA_Dash::OnDashMoveFinished()
 {
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, false);
 }
-

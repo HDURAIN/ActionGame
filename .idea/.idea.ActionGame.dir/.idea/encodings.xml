@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="Encoding" addBOMForNewFiles="with BOM under Windows, with no BOM otherwise">
+    <file url="file://$PROJECT_DIR$/Source/ActionGame/AbilitySystem/Abilities/GA_Dash.cpp" charset="UTF-8" />
     <file url="file://$PROJECT_DIR$/Source/ActionGame/Actors/EnemyProjectile.cpp" charset="GBK" />
     <file url="file://$PROJECT_DIR$/Source/ActionGame/BTService/BTService_UpdateTarget.cpp" charset="GBK" />
     <file url="file://$PROJECT_DIR$/Source/ActionGame/Characters/EnemyGroundShooterCharacter.cpp" charset="GBK" />
-    <file url="PROJECT" charset="GBK" />
+    <file url="PROJECT" charset="UTF-8" />
   </component>
 </project>

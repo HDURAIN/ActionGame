@@ -81,6 +81,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Input")
 	virtual void DoLook(const FInputActionValue& Value);
 
+	/** Clears cached move intent when move input ends */
+	UFUNCTION(BlueprintCallable, Category = "Input")
+	virtual void DoMoveStop(const FInputActionValue& Value);
+
 	/** Handles jump pressed */
 	UFUNCTION(BlueprintCallable, Category = "Input")
 	virtual void DoJumpStart();
@@ -144,8 +148,11 @@ public:
 	/** IAbilitySystemInterface */
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 
-	/** Ïò×ÔÉí·¢ËÍ¼¼ÄÜÊäÈëGameplay Event£¨ºóĞø¹© Skill1~4 ÊäÈëº¯Êı¸´ÓÃ£© */
+	/** å‘è‡ªèº«å‘é€æŠ€èƒ½è¾“å…¥Gameplay Eventï¼ˆåç»­ä¾› Skill1~4 è¾“å…¥å‡½æ•°å¤ç”¨ï¼‰ */
 	void SendSkillInputEvent(const FGameplayTag& EventTag);
+	UFUNCTION(Server, Reliable)
+	void ServerSendSkillInputEvent(const FGameplayTag& EventTag);
+
 
 protected:
 	/** Grants startup abilities */
@@ -201,6 +208,20 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "State")
 	bool IsFiring() const { return bFiring; }
+
+	UFUNCTION(BlueprintPure, Category = "State")
+	FVector GetCachedMoveInputDirection() const { return CachedMoveInputDirection; }
+
+	void PushMoveInputBlock();
+	void PopMoveInputBlock();
+	bool IsMoveInputBlocked() const { return MoveInputBlockCount > 0; }
+
+protected:
+	UFUNCTION(Server, Unreliable)
+	void ServerUpdateCachedMoveInputDirection(const FVector_NetQuantize10& InDirection);
+
+	UFUNCTION(Server, Reliable)
+	void ServerCommitCachedMoveInputDirection(const FVector_NetQuantize10& InDirection);
 
 protected:
 	// =========================================================================
@@ -268,7 +289,7 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Abilities|Events")
 	FGameplayTag JumpEventTag;
 
-	// ¼¼ÄÜÊäÈëÊÂ¼ş£¨¹Ì¶¨4²ÛÎ»£¬Pressed£©
+	// æŠ€èƒ½è¾“å…¥äº‹ä»¶ï¼ˆå›ºå®š4æ§½ä½ï¼ŒPressedï¼‰
 	UPROPERTY(EditDefaultsOnly, Category = "Abilities|Events")
 	FGameplayTag Skill1PressedEventTag;
 
@@ -329,6 +350,8 @@ protected:
 	// =========================================================================
 
 	bool bFiring = false;
+	FVector CachedMoveInputDirection = FVector::ZeroVector;
+	int32 MoveInputBlockCount = 0;
 
 protected:
 	// =========================================================================
@@ -391,3 +414,4 @@ private:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Camera|Occlusion", meta = (AllowPrivateAccess = "true"))
 	bool bCameraMeshHidden = false;
 };
+
