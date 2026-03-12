@@ -6,6 +6,7 @@
 #include "ActionGamePlayerController.h"
 
 #include "AbilitySystem/AttributeSets/AG_AttributeSetBase.h"
+#include "AbilitySystem/Abilities/GA_SecondAttack.h"
 #include "AbilitySystem/Components/AG_AbilitySystemComponentBase.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
@@ -503,6 +504,46 @@ void AActionGameCharacter::ServerSendSkillInputEvent_Implementation(const FGamep
 	Payload.OptionalObject = this;
 
 	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, EventTag, Payload);
+}
+
+void AActionGameCharacter::ServerRequestSecondAttackSweep_Implementation(const FGameplayAbilitySpecHandle& AbilitySpecHandle, const FVector_NetQuantize& StartLocation)
+{
+	if (!AbilitySystemComponent)
+	{
+		return;
+	}
+
+	FGameplayAbilitySpec* Spec = AbilitySystemComponent->FindAbilitySpecFromHandle(AbilitySpecHandle);
+	if (!Spec)
+	{
+		return;
+	}
+
+	if (!Spec->Ability || !Spec->Ability->IsA(UGA_SecondAttack::StaticClass()))
+	{
+		return;
+	}
+
+	UGA_SecondAttack* SecondAttackAbility = Cast<UGA_SecondAttack>(Spec->GetPrimaryInstance());
+	if (!SecondAttackAbility)
+	{
+		TArray<UGameplayAbility*> Instances = Spec->GetAbilityInstances();
+		for (UGameplayAbility* Instance : Instances)
+		{
+			SecondAttackAbility = Cast<UGA_SecondAttack>(Instance);
+			if (SecondAttackAbility)
+			{
+				break;
+			}
+		}
+	}
+
+	if (!SecondAttackAbility)
+	{
+		return;
+	}
+
+	SecondAttackAbility->ServerExecutePenetratingSweepFromClient(FVector(StartLocation));
 }
 
 void AActionGameCharacter::ServerUpdateCachedMoveInputDirection_Implementation(const FVector_NetQuantize10& InDirection)

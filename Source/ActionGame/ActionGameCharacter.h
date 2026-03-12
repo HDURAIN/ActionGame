@@ -153,6 +153,9 @@ public:
 	UFUNCTION(Server, Reliable)
 	void ServerSendSkillInputEvent(const FGameplayTag& EventTag);
 
+	UFUNCTION(Server, Reliable)
+	void ServerRequestSecondAttackSweep(const FGameplayAbilitySpecHandle& AbilitySpecHandle, const FVector_NetQuantize& StartLocation);
+
 
 protected:
 	/** Grants startup abilities */

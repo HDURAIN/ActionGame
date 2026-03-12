@@ -7,7 +7,6 @@
 UBTTask_Attack::UBTTask_Attack()
 {
 	NodeName = TEXT("Attack (Enemy)");
-	// BlackboardBaseKey���� BT ��ѡ TargetActor
 }
 
 EBTNodeResult::Type UBTTask_Attack::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
@@ -24,6 +23,11 @@ EBTNodeResult::Type UBTTask_Attack::ExecuteTask(UBehaviorTreeComponent& OwnerCom
 		return EBTNodeResult::Failed;
 	}
 
+	if (!BB->GetValueAsBool(TEXT("IsAlive")))
+	{
+		return EBTNodeResult::Failed;
+	}
+
 	AActor* TargetActor = Cast<AActor>(BB->GetValueAsObject(GetSelectedBlackboardKey()));
 	if (!IsValid(TargetActor))
 	{
@@ -36,10 +40,7 @@ EBTNodeResult::Type UBTTask_Attack::ExecuteTask(UBehaviorTreeComponent& OwnerCom
 		return EBTNodeResult::Failed;
 	}
 
-	// ���빥����Ϊʱ�����ý��㣻����ά���� Service ����
 	AIC->SetFocus(TargetActor, EAIFocusPriority::Gameplay);
-
-	// ����һ�ι�����������ʵ�֣��������/��ս/�Ա��ȣ�
 	Enemy->PerformAttack(TargetActor);
 
 	return EBTNodeResult::Succeeded;
