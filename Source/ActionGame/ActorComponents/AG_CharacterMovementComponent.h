@@ -20,6 +20,10 @@ public:
 
 	virtual float GetMaxSpeed() const override;
 
+	void SetAbilityBaseMoveSpeedOverride(float InBaseMoveSpeed);
+	void ClearAbilityBaseMoveSpeedOverride();
+	bool HasAbilityBaseMoveSpeedOverride() const { return bHasAbilityBaseMoveSpeedOverride; }
+
 protected:
 	virtual void BeginPlay()override;
 
@@ -28,6 +32,12 @@ protected:
 
 	UPROPERTY()
 	const UAG_AttributeSetBase* CachedAttributeSet;
+
+	UPROPERTY(Transient)
+	bool bHasAbilityBaseMoveSpeedOverride = false;
+
+	UPROPERTY(Transient)
+	float AbilityBaseMoveSpeedOverride = 0.f;
 
 	void CachedAbilitySystem();
 };

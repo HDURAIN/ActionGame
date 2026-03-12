@@ -28,12 +28,26 @@ float UAG_CharacterMovementComponent::GetMaxSpeed() const
 		return BaseSpeed;
 	}
 
-	const float BaseMoveSpeed = CachedAttributeSet->GetBaseMoveSpeed();
+	const float BaseMoveSpeed = bHasAbilityBaseMoveSpeedOverride
+		? FMath::Max(0.f, AbilityBaseMoveSpeedOverride)
+		: CachedAttributeSet->GetBaseMoveSpeed();
 
 	const float SpeedMultiplier = CachedAttributeSet->GetMoveSpeedMultiplier();
 
 	return BaseMoveSpeed * SpeedMultiplier;
 
+}
+
+void UAG_CharacterMovementComponent::SetAbilityBaseMoveSpeedOverride(float InBaseMoveSpeed)
+{
+	bHasAbilityBaseMoveSpeedOverride = true;
+	AbilityBaseMoveSpeedOverride = FMath::Max(0.f, InBaseMoveSpeed);
+}
+
+void UAG_CharacterMovementComponent::ClearAbilityBaseMoveSpeedOverride()
+{
+	bHasAbilityBaseMoveSpeedOverride = false;
+	AbilityBaseMoveSpeedOverride = 0.f;
 }
 
 void UAG_CharacterMovementComponent::CachedAbilitySystem()
