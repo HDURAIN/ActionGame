@@ -47,6 +47,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "SecondAttack")
 	void NotifySecondAttackMontageFinished(bool bWasCancelled);
 
+	/** Faces actor to camera yaw and blocks movement input until released/end. */
+	UFUNCTION(BlueprintCallable, Category = "SecondAttack|Control")
+	void FaceToCameraAndLockMoveInput();
+
+	/** Manually releases movement lock from FaceToCameraAndLockMoveInput. */
+	UFUNCTION(BlueprintCallable, Category = "SecondAttack|Control")
+	void ReleaseMoveInputLock();
+
 	/** Returns beam start/end using the same muzzle and aim logic as damage sweep. */
 	UFUNCTION(BlueprintCallable, Category = "SecondAttack|FX")
 	bool GetSecondAttackBeamStartEnd(FVector& OutStart, FVector& OutEnd) const;
@@ -65,6 +73,7 @@ protected:
 
 private:
 	void ExecutePenetratingSweepServer(const FVector& StartLocation);
+	bool IsClientProvidedStartLocationValid(const FVector& StartLocation) const;
 	bool ComputeActualSweepSegment(
 		const FVector& StartLocation,
 		FVector& OutSweepStart,
@@ -100,10 +109,16 @@ private:
 	FName WeaponTraceChannelName = TEXT("WeaponTrace");
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "SecondAttack|Trace", meta = (AllowPrivateAccess = "true"))
+	FName BlockTraceChannelName = TEXT("AbilityBlock");
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "SecondAttack|Trace", meta = (AllowPrivateAccess = "true"))
 	bool bStopOnBlockingWorld = true;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "SecondAttack|Trace", meta = (AllowPrivateAccess = "true", ClampMin = "0"))
-	int32 MaxPenetrationTargets = 0;
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "SecondAttack|Trace", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float MaxClientStartDistanceFromCharacter = 500.f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "SecondAttack|Trace", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float MaxClientStartDistanceFromWeaponActor = 300.f;
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "SecondAttack|Tuning", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float BaseCooldown = 5.0f;
@@ -128,4 +143,7 @@ private:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "SecondAttack|Debug", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float DebugDrawDuration = 1.0f;
+
+	UPROPERTY(Transient)
+	bool bMoveInputLockedBySecondAttack = false;
 };

@@ -71,6 +71,7 @@ void UGA_SecondAttack::EndAbility(
 	bool bWasCancelled
 )
 {
+	ReleaseMoveInputLock();
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 
@@ -208,6 +209,13 @@ void UGA_SecondAttack::ExecutePenetratingSweepServer(const FVector& StartLocatio
 		return;
 	}
 
+	if (!IsClientProvidedStartLocationValid(StartLocation))
+	{
+		UE_LOG(LogAbilitySystem, Warning, TEXT("[%s] Fire_PenetratingSweep rejected: invalid client start location %s"),
+			*GetName(), *StartLocation.ToCompactString());
+		return;
+	}
+
 	UAbilitySystemComponent* SourceASC = GetASC();
 	if (!SourceASC)
 	{
@@ -270,7 +278,6 @@ void UGA_SecondAttack::ExecutePenetratingSweepServer(const FVector& StartLocatio
 	}
 
 	TSet<AActor*> DamagedActors;
-	int32 DamagedCount = 0;
 
 	for (const FOverlapResult& Overlap : OverlapResults)
 	{
@@ -300,21 +307,17 @@ void UGA_SecondAttack::ExecutePenetratingSweepServer(const FVector& StartLocatio
 		if (bStopOnBlockingWorld)
 		{
 			const FVector TargetLoc = HitActor->GetActorLocation();
-
-			FCollisionObjectQueryParams WorldBlockObjParams;
-			WorldBlockObjParams.AddObjectTypesToQuery(ECC_WorldStatic);
-			WorldBlockObjParams.AddObjectTypesToQuery(ECC_WorldDynamic);
-
+			const ECollisionChannel BlockChannel = GetChannelByName(BlockTraceChannelName);
 			FCollisionQueryParams WorldBlockParams(SCENE_QUERY_STAT(SecondAttack_TargetWorldBlockTrace), false);
 			WorldBlockParams.AddIgnoredActor(Character);
 			WorldBlockParams.AddIgnoredActor(HitActor);
 
 			FHitResult BlockHit;
-			const bool bBlocked = World->LineTraceSingleByObjectType(
+			const bool bBlocked = World->LineTraceSingleByChannel(
 				BlockHit,
 				SweepStart,
 				TargetLoc,
-				WorldBlockObjParams,
+				BlockChannel,
 				WorldBlockParams
 			);
 
@@ -329,13 +332,42 @@ void UGA_SecondAttack::ExecutePenetratingSweepServer(const FVector& StartLocatio
 		SyntheticHit.ImpactPoint = SyntheticHit.Location;
 
 		ApplyDamageToTargetASC(SourceASC, TargetASC, SyntheticHit);
-		++DamagedCount;
+	}
+}
 
-		if (MaxPenetrationTargets > 0 && DamagedCount >= MaxPenetrationTargets)
+bool UGA_SecondAttack::IsClientProvidedStartLocationValid(const FVector& StartLocation) const
+{
+	const AActionGameCharacter* Character = GetCharacter();
+	if (!Character)
+	{
+		return false;
+	}
+
+	const float MaxCharDist = FMath::Max(0.f, MaxClientStartDistanceFromCharacter);
+	if (MaxCharDist > 0.f)
+	{
+		const float CharDistSq = FVector::DistSquared(StartLocation, Character->GetActorLocation());
+		if (CharDistSq > FMath::Square(MaxCharDist))
 		{
-			break;
+			return false;
 		}
 	}
+
+	const float MaxWeaponDist = FMath::Max(0.f, MaxClientStartDistanceFromWeaponActor);
+	if (MaxWeaponDist > 0.f)
+	{
+		const AActor* WeaponActor = Character->GetWeaponActor();
+		if (IsValid(WeaponActor))
+		{
+			const float WeaponDistSq = FVector::DistSquared(StartLocation, WeaponActor->GetActorLocation());
+			if (WeaponDistSq > FMath::Square(MaxWeaponDist))
+			{
+				return false;
+			}
+		}
+	}
+
+	return true;
 }
 
 bool UGA_SecondAttack::ComputeActualSweepSegment(
@@ -370,19 +402,16 @@ bool UGA_SecondAttack::ComputeActualSweepSegment(
 
 	if (bStopOnBlockingWorld)
 	{
-		FCollisionObjectQueryParams WorldBlockObjParams;
-		WorldBlockObjParams.AddObjectTypesToQuery(ECC_WorldStatic);
-		WorldBlockObjParams.AddObjectTypesToQuery(ECC_WorldDynamic);
-
+		const ECollisionChannel BlockChannel = GetChannelByName(BlockTraceChannelName);
 		FCollisionQueryParams WorldBlockParams(SCENE_QUERY_STAT(SecondAttack_ComputeWorldBlockTrace), false);
 		WorldBlockParams.AddIgnoredActor(Character);
 
 		FHitResult BlockHit;
-		const bool bBlocked = World->LineTraceSingleByObjectType(
+		const bool bBlocked = World->LineTraceSingleByChannel(
 			BlockHit,
 			OutSweepStart,
 			DesiredSweepEnd,
-			WorldBlockObjParams,
+			BlockChannel,
 			WorldBlockParams
 		);
 
@@ -405,6 +434,42 @@ void UGA_SecondAttack::NotifySecondAttackMontageFinished(bool bWasCancelled)
 	}
 
 	EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, bWasCancelled);
+}
+
+void UGA_SecondAttack::FaceToCameraAndLockMoveInput()
+{
+	AActionGameCharacter* Character = GetCharacter();
+	if (!Character)
+	{
+		return;
+	}
+
+	if (AController* Controller = Character->GetController())
+	{
+		const FRotator ControlRot = Controller->GetControlRotation();
+		Character->SetActorRotation(FRotator(0.f, ControlRot.Yaw, 0.f));
+	}
+
+	if (!bMoveInputLockedBySecondAttack)
+	{
+		Character->PushMoveInputBlock();
+		bMoveInputLockedBySecondAttack = true;
+	}
+}
+
+void UGA_SecondAttack::ReleaseMoveInputLock()
+{
+	if (!bMoveInputLockedBySecondAttack)
+	{
+		return;
+	}
+
+	if (AActionGameCharacter* Character = GetCharacter())
+	{
+		Character->PopMoveInputBlock();
+	}
+
+	bMoveInputLockedBySecondAttack = false;
 }
 
 bool UGA_SecondAttack::GetSecondAttackBeamStartEnd(FVector& OutStart, FVector& OutEnd) const
