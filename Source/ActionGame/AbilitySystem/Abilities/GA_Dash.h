@@ -7,6 +7,7 @@
 class UAnimMontage;
 class UAbilityTask_ApplyRootMotionConstantForce;
 class UAbilityTask_PlayMontageAndWait;
+class UGameplayEffect;
 
 UCLASS()
 class ACTIONGAME_API UGA_Dash : public UAG_GameplayAbility
@@ -31,6 +32,15 @@ public:
 		bool bWasCancelled
 	) override;
 
+protected:
+	virtual const FGameplayTagContainer* GetCooldownTags() const override;
+
+	virtual void ApplyCooldown(
+		const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo
+	) const override;
+
 private:
 	FVector ComputeDashDirection() const;
 
@@ -53,6 +63,9 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dash", meta = (AllowPrivateAccess = "true"))
 	bool bRotateToDashDirection = true;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dash|Tuning", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float BaseCooldown = 2.0f;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dash|Animation", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UAnimMontage> DashMontage = nullptr;
 
@@ -67,4 +80,10 @@ private:
 
 	UPROPERTY(Transient)
 	bool bMoveInputBlockedByDash = false;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dash|Cooldown", meta = (AllowPrivateAccess = "true"))
+	FGameplayTag CooldownDataTag;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Dash|Cooldown", meta = (AllowPrivateAccess = "true"))
+	FGameplayTagContainer CooldownTagContainer;
 };

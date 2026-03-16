@@ -17,7 +17,7 @@
 
 namespace
 {
-ECollisionChannel GetChannelByName(const FName Name)
+ECollisionChannel ResolveSecondAttackChannelByName(const FName Name)
 {
 	const UCollisionProfile* Profile = UCollisionProfile::Get();
 	if (!Profile)
@@ -55,6 +55,12 @@ void UGA_SecondAttack::ActivateAbility(
 )
 {
 	if (!ActorInfo || !ActorInfo->AvatarActor.IsValid())
+	{
+		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
+		return;
+	}
+
+	if (!CommitAbilityChecked())
 	{
 		EndAbility(Handle, ActorInfo, ActivationInfo, true, true);
 		return;
@@ -223,12 +229,6 @@ void UGA_SecondAttack::ExecutePenetratingSweepServer(const FVector& StartLocatio
 		return;
 	}
 
-	if (!CommitAbilityChecked())
-	{
-		EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, true, true);
-		return;
-	}
-
 	FVector SweepStart = FVector::ZeroVector;
 	FVector SweepEnd = FVector::ZeroVector;
 	float SafeRange = 0.f;
@@ -307,7 +307,7 @@ void UGA_SecondAttack::ExecutePenetratingSweepServer(const FVector& StartLocatio
 		if (bStopOnBlockingWorld)
 		{
 			const FVector TargetLoc = HitActor->GetActorLocation();
-			const ECollisionChannel BlockChannel = GetChannelByName(BlockTraceChannelName);
+			const ECollisionChannel BlockChannel = ResolveSecondAttackChannelByName(BlockTraceChannelName);
 			FCollisionQueryParams WorldBlockParams(SCENE_QUERY_STAT(SecondAttack_TargetWorldBlockTrace), false);
 			WorldBlockParams.AddIgnoredActor(Character);
 			WorldBlockParams.AddIgnoredActor(HitActor);
@@ -402,7 +402,7 @@ bool UGA_SecondAttack::ComputeActualSweepSegment(
 
 	if (bStopOnBlockingWorld)
 	{
-		const ECollisionChannel BlockChannel = GetChannelByName(BlockTraceChannelName);
+		const ECollisionChannel BlockChannel = ResolveSecondAttackChannelByName(BlockTraceChannelName);
 		FCollisionQueryParams WorldBlockParams(SCENE_QUERY_STAT(SecondAttack_ComputeWorldBlockTrace), false);
 		WorldBlockParams.AddIgnoredActor(Character);
 
@@ -519,7 +519,7 @@ bool UGA_SecondAttack::BuildAimDirectionFromCamera(const FVector& StartLocation,
 	FCollisionQueryParams CamParams(SCENE_QUERY_STAT(SecondAttack_CameraTrace_OverrideStart), false);
 	CamParams.AddIgnoredActor(Character);
 
-	const ECollisionChannel WeaponChannel = GetChannelByName(WeaponTraceChannelName);
+	const ECollisionChannel WeaponChannel = ResolveSecondAttackChannelByName(WeaponTraceChannelName);
 
 	FHitResult CamHit;
 	const bool bCamHit = World->LineTraceSingleByChannel(
@@ -599,7 +599,7 @@ bool UGA_SecondAttack::BuildAimFromCameraAndMuzzle(FVector& OutMuzzleLoc, FVecto
 	FCollisionQueryParams CamParams(SCENE_QUERY_STAT(SecondAttack_CameraTrace), false);
 	CamParams.AddIgnoredActor(Character);
 
-	const ECollisionChannel WeaponChannel = GetChannelByName(WeaponTraceChannelName);
+	const ECollisionChannel WeaponChannel = ResolveSecondAttackChannelByName(WeaponTraceChannelName);
 
 	FHitResult CamHit;
 	const bool bCamHit = World->LineTraceSingleByChannel(

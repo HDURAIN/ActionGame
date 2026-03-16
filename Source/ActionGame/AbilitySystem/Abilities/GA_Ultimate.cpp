@@ -18,6 +18,8 @@ UGA_Ultimate::UGA_Ultimate()
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
 
 	DamageDataTag = FGameplayTag::RequestGameplayTag(TEXT("Data.Damage"));
+	CooldownDataTag = FGameplayTag::RequestGameplayTag(TEXT("Data.CD.Skill4"));
+	CooldownTagContainer.AddTag(FGameplayTag::RequestGameplayTag(TEXT("Cooldown.Skill4")));
 }
 
 void UGA_Ultimate::ActivateAbility(
@@ -59,6 +61,37 @@ void UGA_Ultimate::EndAbility(
 	TriggeredWaveCount = 0;
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+}
+
+const FGameplayTagContainer* UGA_Ultimate::GetCooldownTags() const
+{
+	return &CooldownTagContainer;
+}
+
+void UGA_Ultimate::ApplyCooldown(
+	const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo
+) const
+{
+	if (!ActorInfo || !ActorInfo->AbilitySystemComponent.IsValid() || !CooldownGameplayEffectClass)
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get();
+	const float CDR = ASC->GetNumericAttribute(UAG_AttributeSetBase::GetCooldownReductionAttribute());
+	const float FinalCD = FMath::Max(0.f, BaseCooldown * (1.f - CDR));
+
+	FGameplayEffectSpecHandle SpecHandle =
+		MakeOutgoingGameplayEffectSpec(CooldownGameplayEffectClass, GetAbilityLevel(Handle, ActorInfo));
+	if (!SpecHandle.IsValid())
+	{
+		return;
+	}
+
+	SpecHandle.Data->SetSetByCallerMagnitude(CooldownDataTag, FinalCD);
+	ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 }
 
 void UGA_Ultimate::TriggerUltimateWave()
@@ -254,4 +287,3 @@ void UGA_Ultimate::ApplyWaveDamageAndKnockback()
 		}
 	}
 }
-

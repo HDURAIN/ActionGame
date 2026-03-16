@@ -42,6 +42,14 @@ public:
 	void NotifyUltimateMontageFinished(bool bWasCancelled);
 
 protected:
+	virtual const FGameplayTagContainer* GetCooldownTags() const override;
+
+	virtual void ApplyCooldown(
+		const FGameplayAbilitySpecHandle Handle,
+		const FGameplayAbilityActorInfo* ActorInfo,
+		const FGameplayAbilityActivationInfo ActivationInfo
+	) const override;
+
 	/** Blueprint should play Ultimate montage and call TriggerUltimateWave from notifies. */
 	UFUNCTION(BlueprintImplementableEvent, Category = "Ultimate")
 	void K2_OnUltimateActivated();
@@ -62,6 +70,9 @@ private:
 	/** Damage formula per wave: AttackPower * DamageMultiplier * UltimateDamage. */
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ultimate|Damage", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float UltimateDamage = 1.0f;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ultimate|Tuning", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float BaseCooldown = 10.0f;
 
 	// Waves
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ultimate|Wave", meta = (AllowPrivateAccess = "true", ClampMin = "1"))
@@ -85,6 +96,12 @@ private:
 	float KnockbackUpward = 180.f;
 
 private:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ultimate|Cooldown", meta = (AllowPrivateAccess = "true"))
+	FGameplayTag CooldownDataTag;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ultimate|Cooldown", meta = (AllowPrivateAccess = "true"))
+	FGameplayTagContainer CooldownTagContainer;
+
 	UPROPERTY(Transient)
 	int32 TriggeredWaveCount = 0;
 

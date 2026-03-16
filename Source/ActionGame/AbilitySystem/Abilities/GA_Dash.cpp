@@ -4,6 +4,8 @@
 #include "Abilities/Tasks/AbilityTask_ApplyRootMotionConstantForce.h"
 #include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
 #include "Animation/AnimMontage.h"
+#include "AbilitySystemComponent.h"
+#include "AbilitySystem/AttributeSets/AG_AttributeSetBase.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "AbilitySystemLog.h"
 
@@ -11,6 +13,9 @@ UGA_Dash::UGA_Dash()
 {
 	NetExecutionPolicy = EGameplayAbilityNetExecutionPolicy::LocalPredicted;
 	InstancingPolicy = EGameplayAbilityInstancingPolicy::InstancedPerActor;
+
+	CooldownDataTag = FGameplayTag::RequestGameplayTag(TEXT("Data.CD.Skill3"));
+	CooldownTagContainer.AddTag(FGameplayTag::RequestGameplayTag(TEXT("Cooldown.Skill3")));
 }
 
 void UGA_Dash::ActivateAbility(
@@ -149,6 +154,37 @@ void UGA_Dash::EndAbility(
 	}
 
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+}
+
+const FGameplayTagContainer* UGA_Dash::GetCooldownTags() const
+{
+	return &CooldownTagContainer;
+}
+
+void UGA_Dash::ApplyCooldown(
+	const FGameplayAbilitySpecHandle Handle,
+	const FGameplayAbilityActorInfo* ActorInfo,
+	const FGameplayAbilityActivationInfo ActivationInfo
+) const
+{
+	if (!ActorInfo || !ActorInfo->AbilitySystemComponent.IsValid() || !CooldownGameplayEffectClass)
+	{
+		return;
+	}
+
+	UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get();
+	const float CDR = ASC->GetNumericAttribute(UAG_AttributeSetBase::GetCooldownReductionAttribute());
+	const float FinalCD = FMath::Max(0.f, BaseCooldown * (1.f - CDR));
+
+	FGameplayEffectSpecHandle SpecHandle =
+		MakeOutgoingGameplayEffectSpec(CooldownGameplayEffectClass, GetAbilityLevel(Handle, ActorInfo));
+	if (!SpecHandle.IsValid())
+	{
+		return;
+	}
+
+	SpecHandle.Data->SetSetByCallerMagnitude(CooldownDataTag, FinalCD);
+	ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 }
 
 FVector UGA_Dash::ComputeDashDirection() const
