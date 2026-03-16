@@ -72,6 +72,10 @@ protected:
 	void K2_OnActivateFromEvent();
 
 private:
+	void UpdateFacingToCamera();
+	void StartFacingToCameraLoop();
+	void StopFacingToCameraLoop();
+
 	void ExecutePenetratingSweepServer(const FVector& StartLocation);
 	bool IsClientProvidedStartLocationValid(const FVector& StartLocation) const;
 	bool ComputeActualSweepSegment(
@@ -144,6 +148,14 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "SecondAttack|Debug", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float DebugDrawDuration = 1.0f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "SecondAttack|Control", meta = (AllowPrivateAccess = "true"))
+	bool bFaceCameraUntilAbilityEnd = true;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "SecondAttack|Control", meta = (AllowPrivateAccess = "true", ClampMin = "0.01"))
+	float FaceCameraUpdateInterval = 0.02f;
+
 	UPROPERTY(Transient)
 	bool bMoveInputLockedBySecondAttack = false;
+
+	FTimerHandle FaceCameraLoopTimerHandle;
 };

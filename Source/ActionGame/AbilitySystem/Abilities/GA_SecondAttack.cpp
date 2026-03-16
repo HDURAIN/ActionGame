@@ -14,6 +14,7 @@
 #include "Engine/World.h"
 #include "GameFramework/PlayerController.h"
 #include "GameplayEffect.h"
+#include "TimerManager.h"
 
 namespace
 {
@@ -77,6 +78,7 @@ void UGA_SecondAttack::EndAbility(
 	bool bWasCancelled
 )
 {
+	StopFacingToCameraLoop();
 	ReleaseMoveInputLock();
 	Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
@@ -489,11 +491,8 @@ void UGA_SecondAttack::FaceToCameraAndLockMoveInput()
 		return;
 	}
 
-	if (AController* Controller = Character->GetController())
-	{
-		const FRotator ControlRot = Controller->GetControlRotation();
-		Character->SetActorRotation(FRotator(0.f, ControlRot.Yaw, 0.f));
-	}
+	UpdateFacingToCamera();
+	StartFacingToCameraLoop();
 
 	if (!bMoveInputLockedBySecondAttack)
 	{
@@ -504,6 +503,8 @@ void UGA_SecondAttack::FaceToCameraAndLockMoveInput()
 
 void UGA_SecondAttack::ReleaseMoveInputLock()
 {
+	StopFacingToCameraLoop();
+
 	if (!bMoveInputLockedBySecondAttack)
 	{
 		return;
@@ -515,6 +516,57 @@ void UGA_SecondAttack::ReleaseMoveInputLock()
 	}
 
 	bMoveInputLockedBySecondAttack = false;
+}
+
+void UGA_SecondAttack::UpdateFacingToCamera()
+{
+	AActionGameCharacter* Character = GetCharacter();
+	if (!Character)
+	{
+		return;
+	}
+
+	if (AController* Controller = Character->GetController())
+	{
+		const FRotator ControlRot = Controller->GetControlRotation();
+		Character->SetActorRotation(FRotator(0.f, ControlRot.Yaw, 0.f));
+	}
+}
+
+void UGA_SecondAttack::StartFacingToCameraLoop()
+{
+	if (!bFaceCameraUntilAbilityEnd)
+	{
+		return;
+	}
+
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	if (World->GetTimerManager().IsTimerActive(FaceCameraLoopTimerHandle))
+	{
+		return;
+	}
+
+	const float SafeInterval = FMath::Max(0.01f, FaceCameraUpdateInterval);
+	World->GetTimerManager().SetTimer(
+		FaceCameraLoopTimerHandle,
+		this,
+		&UGA_SecondAttack::UpdateFacingToCamera,
+		SafeInterval,
+		true
+	);
+}
+
+void UGA_SecondAttack::StopFacingToCameraLoop()
+{
+	if (UWorld* World = GetWorld())
+	{
+		World->GetTimerManager().ClearTimer(FaceCameraLoopTimerHandle);
+	}
 }
 
 bool UGA_SecondAttack::GetSecondAttackBeamStartEnd(FVector& OutStart, FVector& OutEnd) const
