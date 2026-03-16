@@ -2,10 +2,12 @@
 
 #include "AbilitySystemComponent.h"
 #include "AbilitySystem/AttributeSets/AG_AttributeSetBase.h"
+#include "Components/Image.h"
 #include "Components/ProgressBar.h"
 #include "Components/TextBlock.h"
 #include "Engine/World.h"
 #include "ActionGameGameState.h"
+#include "GameplayEffectTypes.h"
 
 void UPlayerHUDWidget::InitWithASC(UAbilitySystemComponent* InASC)
 {
@@ -26,6 +28,8 @@ void UPlayerHUDWidget::InitWithASC(UAbilitySystemComponent* InASC)
 	RefreshInitialAttributeUI();
 	// Initialize GameState UI once.
 	RefreshGameStateSection();
+	// Initialize skill icon and cooldown UI once.
+	RefreshSkillCooldownSection();
 	// Bind attribute change listeners.
 	BindAttributeDelegates();
 }
@@ -35,6 +39,7 @@ void UPlayerHUDWidget::NativeTick(const FGeometry& MyGeometry, float InDeltaTime
 	Super::NativeTick(MyGeometry, InDeltaTime);
 	// Lightweight refresh for global GameState values.
 	RefreshGameStateSection();
+	RefreshSkillCooldownSection();
 }
 
 void UPlayerHUDWidget::NativeDestruct()
@@ -181,6 +186,34 @@ void UPlayerHUDWidget::RefreshGameStateSection()
 	RefreshStage(GS->GetDifficultyStage());
 }
 
+void UPlayerHUDWidget::RefreshSkillCooldownSection()
+{
+	for (int32 SlotIndex = 0; SlotIndex < 4; ++SlotIndex)
+	{
+		UImage* IconWidget = GetSkillIconWidgetBySlot(SlotIndex);
+		UTextBlock* CooldownTextWidget = GetSkillCooldownTextWidgetBySlot(SlotIndex);
+		if (!IconWidget && !CooldownTextWidget)
+		{
+			continue;
+		}
+
+		if (!SkillSlotConfigs.IsValidIndex(SlotIndex))
+		{
+			ApplySkillSlotVisual(SlotIndex, 0.f);
+			continue;
+		}
+
+		const FSkillSlotUIConfig& Config = SkillSlotConfigs[SlotIndex];
+		if (IconWidget && Config.Icon)
+		{
+			IconWidget->SetBrushFromTexture(Config.Icon);
+		}
+
+		const float RemainingSeconds = GetCooldownRemainingByTag(Config.CooldownTag);
+		ApplySkillSlotVisual(SlotIndex, RemainingSeconds);
+	}
+}
+
 void UPlayerHUDWidget::RefreshGameTime(float ElapsedSeconds)
 {
 	if (!Text_GameTime)
@@ -252,4 +285,88 @@ float UPlayerHUDWidget::GetCurrentGold() const
 	}
 
 	return ASC->GetNumericAttribute(UAG_AttributeSetBase::GetGoldAttribute());
+}
+
+float UPlayerHUDWidget::GetCooldownRemainingByTag(const FGameplayTag& CooldownTag) const
+{
+	if (!ASC || !CooldownTag.IsValid())
+	{
+		return 0.f;
+	}
+
+	FGameplayTagContainer CooldownTags;
+	CooldownTags.AddTag(CooldownTag);
+
+	const FGameplayEffectQuery Query = FGameplayEffectQuery::MakeQuery_MatchAnyOwningTags(CooldownTags);
+	const TArray<float> RemainingTimes = ASC->GetActiveEffectsTimeRemaining(Query);
+
+	float MaxRemaining = 0.f;
+	for (const float TimeRemaining : RemainingTimes)
+	{
+		MaxRemaining = FMath::Max(MaxRemaining, TimeRemaining);
+	}
+
+	return FMath::Max(0.f, MaxRemaining);
+}
+
+void UPlayerHUDWidget::ApplySkillSlotVisual(int32 SlotIndex, float RemainingSeconds)
+{
+	UImage* IconWidget = GetSkillIconWidgetBySlot(SlotIndex);
+	UTextBlock* CooldownTextWidget = GetSkillCooldownTextWidgetBySlot(SlotIndex);
+
+	const bool bCoolingDown = RemainingSeconds > KINDA_SMALL_NUMBER;
+
+	if (IconWidget)
+	{
+		IconWidget->SetColorAndOpacity(
+			bCoolingDown ? FLinearColor(0.35f, 0.35f, 0.35f, 1.f) : FLinearColor::White
+		);
+	}
+
+	if (!CooldownTextWidget)
+	{
+		return;
+	}
+
+	if (!bCoolingDown)
+	{
+		CooldownTextWidget->SetVisibility(ESlateVisibility::Hidden);
+		return;
+	}
+
+	const float DisplayValue = RemainingSeconds >= 1.f
+		? static_cast<float>(FMath::CeilToInt(RemainingSeconds))
+		: FMath::RoundToFloat(RemainingSeconds * 10.f) / 10.f;
+
+	const bool bShowDecimal = DisplayValue < 1.f;
+	CooldownTextWidget->SetText(
+		bShowDecimal
+		? FText::FromString(FString::Printf(TEXT("%.1f"), DisplayValue))
+		: FText::AsNumber(FMath::RoundToInt(DisplayValue))
+	);
+	CooldownTextWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+}
+
+UImage* UPlayerHUDWidget::GetSkillIconWidgetBySlot(int32 SlotIndex) const
+{
+	switch (SlotIndex)
+	{
+	case 0: return Image_SkillIcon_1;
+	case 1: return Image_SkillIcon_2;
+	case 2: return Image_SkillIcon_3;
+	case 3: return Image_SkillIcon_4;
+	default: return nullptr;
+	}
+}
+
+UTextBlock* UPlayerHUDWidget::GetSkillCooldownTextWidgetBySlot(int32 SlotIndex) const
+{
+	switch (SlotIndex)
+	{
+	case 0: return Text_SkillCD_1;
+	case 1: return Text_SkillCD_2;
+	case 2: return Text_SkillCD_3;
+	case 3: return Text_SkillCD_4;
+	default: return nullptr;
+	}
 }

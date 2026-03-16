@@ -7,6 +7,7 @@
 #include "AbilitySystem/AttributeSets/AG_AttributeSetBase.h"
 #include "ActorComponents/AG_CharacterMovementComponent.h"
 #include "Characters/EnemyCharacterBase.h"
+#include "DrawDebugHelpers.h"
 #include "Engine/OverlapResult.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameplayEffect.h"
@@ -213,6 +214,22 @@ void UGA_Ultimate::ApplyWaveDamageAndKnockback()
 	}
 
 	const FVector Origin = Character->GetActorLocation();
+	const float SafeWaveRadius = FMath::Max(0.f, WaveRadius);
+
+	if (bDebugDrawWave)
+	{
+		DrawDebugSphere(
+			World,
+			Origin,
+			SafeWaveRadius,
+			24,
+			FColor::Cyan,
+			false,
+			DebugDrawDuration,
+			0,
+			1.25f
+		);
+	}
 
 	FCollisionQueryParams QueryParams(SCENE_QUERY_STAT(UltimateWaveOverlap), false);
 	QueryParams.AddIgnoredActor(Character);
@@ -226,7 +243,7 @@ void UGA_Ultimate::ApplyWaveDamageAndKnockback()
 		Origin,
 		FQuat::Identity,
 		ObjectParams,
-		FCollisionShape::MakeSphere(FMath::Max(0.f, WaveRadius)),
+		FCollisionShape::MakeSphere(SafeWaveRadius),
 		QueryParams
 	);
 
@@ -270,6 +287,30 @@ void UGA_Ultimate::ApplyWaveDamageAndKnockback()
 		{
 			SpecHandle.Data->SetSetByCallerMagnitude(DamageDataTag, -FinalDamage);
 			SourceASC->ApplyGameplayEffectSpecToTarget(*SpecHandle.Data.Get(), TargetASC);
+		}
+
+		if (bDebugDrawWave)
+		{
+			const FVector TargetLoc = TargetActor->GetActorLocation();
+			DrawDebugLine(
+				World,
+				Origin,
+				TargetLoc,
+				FColor::Green,
+				false,
+				DebugDrawDuration,
+				0,
+				1.25f
+			);
+			DrawDebugSphere(
+				World,
+				TargetLoc,
+				16.f,
+				12,
+				FColor::Yellow,
+				false,
+				DebugDrawDuration
+			);
 		}
 
 		FVector KnockDir = TargetActor->GetActorLocation() - Origin;

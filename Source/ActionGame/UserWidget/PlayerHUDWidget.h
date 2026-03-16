@@ -2,13 +2,28 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "GameplayTagContainer.h"
 #include "PlayerHUDWidget.generated.h"
 
 class UAbilitySystemComponent;
 class UProgressBar;
 class UTextBlock;
+class UImage;
+class UTexture2D;
 class AActionGameGameState;
 struct FOnAttributeChangeData;
+
+USTRUCT(BlueprintType)
+struct FSkillSlotUIConfig
+{
+	GENERATED_BODY()
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SkillUI")
+	FGameplayTag CooldownTag;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "SkillUI")
+	TObjectPtr<UTexture2D> Icon = nullptr;
+};
 
 UCLASS()
 class ACTIONGAME_API UPlayerHUDWidget : public UUserWidget
@@ -45,6 +60,33 @@ protected:
 
 	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
 	TObjectPtr<UTextBlock> Text_Stage = nullptr;
+
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidgetOptional))
+	TObjectPtr<UImage> Image_SkillIcon_1 = nullptr;
+
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidgetOptional))
+	TObjectPtr<UImage> Image_SkillIcon_2 = nullptr;
+
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidgetOptional))
+	TObjectPtr<UImage> Image_SkillIcon_3 = nullptr;
+
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidgetOptional))
+	TObjectPtr<UImage> Image_SkillIcon_4 = nullptr;
+
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> Text_SkillCD_1 = nullptr;
+
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> Text_SkillCD_2 = nullptr;
+
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> Text_SkillCD_3 = nullptr;
+
+	UPROPERTY(BlueprintReadWrite, meta = (BindWidgetOptional))
+	TObjectPtr<UTextBlock> Text_SkillCD_4 = nullptr;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "SkillUI")
+	TArray<FSkillSlotUIConfig> SkillSlotConfigs;
 
 private:
 	// =========================
@@ -86,6 +128,7 @@ private:
 	void RefreshGameTime(float ElapsedSeconds);
 	void RefreshStage(int32 Stage);
 	void RefreshGameStateSection();
+	void RefreshSkillCooldownSection();
 
 private:
 	// =========================
@@ -95,4 +138,8 @@ private:
 	float GetCurrentHealth() const;
 	float GetCurrentMaxHealth() const;
 	float GetCurrentGold() const;
+	float GetCooldownRemainingByTag(const FGameplayTag& CooldownTag) const;
+	void ApplySkillSlotVisual(int32 SlotIndex, float RemainingSeconds);
+	UImage* GetSkillIconWidgetBySlot(int32 SlotIndex) const;
+	UTextBlock* GetSkillCooldownTextWidgetBySlot(int32 SlotIndex) const;
 };

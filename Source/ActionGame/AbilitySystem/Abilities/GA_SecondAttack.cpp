@@ -323,6 +323,28 @@ void UGA_SecondAttack::ExecutePenetratingSweepServer(const FVector& StartLocatio
 
 			if (bBlocked && BlockHit.bBlockingHit)
 			{
+				if (bDebugDrawSweep)
+				{
+					DrawDebugLine(
+						World,
+						SweepStart,
+						BlockHit.ImpactPoint,
+						FColor::Red,
+						false,
+						DebugDrawDuration,
+						0,
+						1.5f
+					);
+					DrawDebugSphere(
+						World,
+						BlockHit.ImpactPoint,
+						12.f,
+						12,
+						FColor::Red,
+						false,
+						DebugDrawDuration
+					);
+				}
 				continue;
 			}
 		}
@@ -332,6 +354,29 @@ void UGA_SecondAttack::ExecutePenetratingSweepServer(const FVector& StartLocatio
 		SyntheticHit.ImpactPoint = SyntheticHit.Location;
 
 		ApplyDamageToTargetASC(SourceASC, TargetASC, SyntheticHit);
+
+		if (bDebugDrawSweep)
+		{
+			DrawDebugLine(
+				World,
+				SweepStart,
+				SyntheticHit.ImpactPoint,
+				FColor::Green,
+				false,
+				DebugDrawDuration,
+				0,
+				1.25f
+			);
+			DrawDebugSphere(
+				World,
+				SyntheticHit.ImpactPoint,
+				14.f,
+				12,
+				FColor::Green,
+				false,
+				DebugDrawDuration
+			);
+		}
 	}
 }
 

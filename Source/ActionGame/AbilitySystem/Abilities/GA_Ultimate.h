@@ -81,6 +81,12 @@ private:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ultimate|Wave", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float WaveRadius = 450.f;
 
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ultimate|Debug", meta = (AllowPrivateAccess = "true"))
+	bool bDebugDrawWave = false;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ultimate|Debug", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
+	float DebugDrawDuration = 1.0f;
+
 	// Movement
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Ultimate|Movement", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
 	float UltimateBaseMoveSpeed = 180.f;
